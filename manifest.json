@@ -1,0 +1,16 @@
+{
+  "name": "家族旅行＆おでかけマップ",
+  "short_name": "旅マップ",
+  "description": "家族の思い出・おでかけスポット管理アプリ",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#007bff",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/854/854878.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
