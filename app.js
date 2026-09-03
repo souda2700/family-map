@@ -18,7 +18,7 @@ const prefecturesByRegion = {
   "九州・沖縄": ["福岡県", "佐賀県", "長崎県", "熊本県", "大分県", "宮崎県", "鹿児島県", "沖縄県"]
 };
 
-// DOM要素の取得
+// DOM要素の取得（新規登録フォーム）
 const spotForm = document.getElementById('spot-form');
 const regionInput = document.getElementById('region');
 const prefInput = document.getElementById('pref');
@@ -31,6 +31,7 @@ const spotMemoInput = document.getElementById('spot-memo');
 
 // 検索・絞り込み要素
 const searchRegionInput = document.getElementById('search-region');
+const searchPrefInput = document.getElementById('search-pref');
 const searchCategoryInput = document.getElementById('search-category');
 const searchInput = document.getElementById('search-input');
 const clearFilterBtn = document.getElementById('clear-filter-btn');
@@ -40,10 +41,10 @@ const spotListContainer = document.getElementById('spot-list');
 // ローカルストレージからデータ取得
 let spots = JSON.parse(localStorage.getItem('familyMapSpots')) || [];
 
-// 地域選択が変わった時に都道府県のドロップダウンを更新する処理
+// 登録フォーム：地域選択が変わった時に都道府県のドロップダウンを更新
 regionInput.addEventListener('change', () => {
   const selectedRegion = regionInput.value;
-  prefInput.innerHTML = ''; // 一旦リセット
+  prefInput.innerHTML = ''; // リセット
 
   if (!selectedRegion) {
     prefInput.innerHTML = '<option value="">先に地域を選択してください</option>';
@@ -61,8 +62,24 @@ regionInput.addEventListener('change', () => {
   });
 });
 
+// 検索エリア：地域選択が変わった時に都道府県のドロップダウンを更新
+searchRegionInput.addEventListener('change', () => {
+  const selectedRegion = searchRegionInput.value;
+  searchPrefInput.innerHTML = '<option value="">すべての都道府県</option>'; // リセット
+
+  if (selectedRegion && prefecturesByRegion[selectedRegion]) {
+    prefecturesByRegion[selectedRegion].forEach(pref => {
+      const opt = document.createElement('option');
+      opt.value = pref;
+      opt.textContent = pref;
+      searchPrefInput.appendChild(opt);
+    });
+  }
+  renderSpots();
+});
+
 // 絞り込み条件の変更イベント設定
-if (searchRegionInput) searchRegionInput.addEventListener('change', renderSpots);
+if (searchPrefInput) searchPrefInput.addEventListener('change', renderSpots);
 if (searchCategoryInput) searchCategoryInput.addEventListener('change', renderSpots);
 if (searchInput) searchInput.addEventListener('input', renderSpots);
 
@@ -70,6 +87,7 @@ if (searchInput) searchInput.addEventListener('input', renderSpots);
 if (clearFilterBtn) {
   clearFilterBtn.addEventListener('click', () => {
     searchRegionInput.value = '';
+    searchPrefInput.innerHTML = '<option value="">すべての都道府県</option>';
     searchCategoryInput.value = '';
     searchInput.value = '';
     renderSpots();
@@ -124,6 +142,7 @@ function renderSpots() {
 
   // 絞り込み条件の取得
   const selectedRegion = searchRegionInput ? searchRegionInput.value : '';
+  const selectedPref = searchPrefInput ? searchPrefInput.value : '';
   const selectedCategory = searchCategoryInput ? searchCategoryInput.value : '';
   const keyword = searchInput ? searchInput.value.trim().toLowerCase() : '';
 
@@ -133,16 +152,19 @@ function renderSpots() {
     if (selectedRegion && spot.region !== selectedRegion) {
       return false;
     }
+    // 都道府県で絞り込み
+    if (selectedPref && spot.pref !== selectedPref) {
+      return false;
+    }
     // 目的・カテゴリで絞り込み
     if (selectedCategory && spot.category !== selectedCategory) {
       return false;
     }
-    // フリーワード（名前・都道府県・メモ）で絞り込み
+    // フリーワード（名前・メモ等）で絞り込み
     if (keyword) {
       const nameMatch = spot.name && spot.name.toLowerCase().includes(keyword);
-      const prefMatch = spot.pref && spot.pref.toLowerCase().includes(keyword);
       const memoMatch = spot.memo && spot.memo.toLowerCase().includes(keyword);
-      if (!nameMatch && !prefMatch && !memoMatch) {
+      if (!nameMatch && !memoMatch) {
         return false;
       }
     }
@@ -150,7 +172,7 @@ function renderSpots() {
   });
 
   if (filteredSpots.length === 0) {
-    if (selectedRegion || selectedCategory || keyword) {
+    if (selectedRegion || selectedPref || selectedCategory || keyword) {
       spotListContainer.innerHTML = '<p style="color:#888; text-align:center; padding: 20px 0;">条件に一致するスポットが見つかりませんでした。</p>';
     } else {
       spotListContainer.innerHTML = '<p style="color:#888; text-align:center; padding: 20px 0;">まだ登録されたスポットはありません。</p>';
