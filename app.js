@@ -225,3 +225,62 @@ function escapeHtml(str) {
     return escapeMap[match];
   });
 }
+
+// ==========================================
+// 💾 データ管理（バックアップ・復元）処理
+// ==========================================
+const exportBtn = document.getElementById('export-btn');
+const importTriggerBtn = document.getElementById('import-trigger-btn');
+const importFileInput = document.getElementById('import-file');
+
+// データ出力 (JSONファイルダウンロード)
+if (exportBtn) {
+  exportBtn.addEventListener('click', () => {
+    if (spots.length === 0) {
+      alert('保存するスポットデータがありません。');
+      return;
+    }
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(spots, null, 2));
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute("href", dataStr);
+    downloadAnchor.setAttribute("download", `family_map_backup_${new Date().toISOString().slice(0,10)}.json`);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+  });
+}
+
+// データ取り込みボタンクリック時
+if (importTriggerBtn) {
+  importTriggerBtn.addEventListener('click', () => {
+    importFileInput.click();
+  });
+}
+
+// ファイル選択時の取り込み処理
+if (importFileInput) {
+  importFileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const importedSpots = JSON.parse(event.target.result);
+        if (Array.isArray(importedSpots)) {
+          if (confirm('現在のデータを上書きして復元しますか？')) {
+            spots = importedSpots;
+            saveAndRender();
+            alert('データを正常に復元しました！');
+          }
+        } else {
+          alert('正しいバックアップファイルではありません。');
+        }
+      } catch (err) {
+        alert('ファイルの読み込みに失敗しました。');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = ''; // リセット
+  });
+}

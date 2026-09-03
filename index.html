@@ -160,6 +160,21 @@
         <!-- JavaScriptでここにカードが追加されます -->
       </div>
     </section>
+    
+    </section>
+
+    <!-- 💾 バックアップ・復元エリア -->
+    <section class="form-container">
+      <h2>データ管理（バックアップ・復元）</h2>
+      <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <button type="button" id="export-btn" style="flex: 1; padding: 10px; background-color: #2b6cb0; color: white; border: none; border-radius: 6px; cursor:   pointer; font-weight: bold;">データを保存 (出力)</button>
+        <button type="button" id="import-trigger-btn" style="flex: 1; padding: 10px; background-color: #4a5568; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">データを復元 (取込)</button>
+        <input type="file" id="import-file" accept=".json" style="display: none;">
+      </div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
   </main>
 
   <script src="app.js"></script>
