@@ -163,7 +163,7 @@
     
     </section>
 
-    <!-- 💾 バックアップ・復元エリア -->
+<!-- 💾 バックアップ・復元エリア -->
     <section class="form-container">
       <h2>データ管理（バックアップ・復元）</h2>
       <div style="display: flex; gap: 10px; flex-wrap: wrap;">
@@ -172,12 +172,12 @@
       </div>
     </section>
 
-    <!-- 🔄 復元用テキスト入力画面（通常は隠れています） -->
+    <!-- 🔄 復元用テキスト入力画面 -->
     <div id="import-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; align-items: center; justify-content: center;">
       <div style="background: white; padding: 20px; border-radius: 12px; width: 90%; max-width: 500px; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">
         <h3 style="margin-top: 0;">📋 バックアップデータの復元</h3>
         <p style="font-size: 0.9rem; color: #555;">保存したファイルの中身（テキスト）をコピーして、下の枠内に貼り付けてください。</p>
-        <textarea id="import-text-input" rows="8" placeholder='ここにテキストを貼り付け' style="width: 100%; box-sizing: border-box; margin-bottom: 15px; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-family: monospace; font-size: 0.85rem;"></textarea>
+        <textarea id="import-text-input" rows="8" placeholder="ここにテキストを貼り付け" style="width: 100%; box-sizing: border-box; margin-bottom: 15px; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-family: monospace; font-size: 0.85rem;"></textarea>
         <div style="display: flex; gap: 10px;">
           <button type="button" id="import-execute-btn" style="flex: 1; padding: 10px; background-color: #2b6cb0; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;">復元を実行</button>
           <button type="button" id="import-cancel-btn" style="flex: 1; padding: 10px; background-color: #718096; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;">キャンセル</button>

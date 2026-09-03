@@ -231,10 +231,7 @@ function escapeHtml(str) {
 // ==========================================
 const exportBtn = document.getElementById('export-btn');
 const importTriggerBtn = document.getElementById('import-trigger-btn');
-const importModal = document.getElementById('import-modal');
-const importTextInput = document.getElementById('import-text-input');
-const importExecuteBtn = document.getElementById('import-execute-btn');
-const importCancelBtn = document.getElementById('import-cancel-btn');
+const importFileInput = document.getElementById('import-file');
 
 // データ出力 (JSONファイルダウンロード)
 if (exportBtn) {
@@ -252,48 +249,42 @@ if (exportBtn) {
     downloadAnchor.click();
     downloadAnchor.remove();
 
+    // 保存完了のメッセージを表示
     alert(`バックアップファイルを保存しました！\n（端末の「ダウンロード」フォルダをご確認ください）`);
   });
 }
 
-// 「データを復元 (取込)」ボタンクリックで入力画面表示
-if (importTriggerBtn && importModal) {
+// データ取り込みボタンクリック時
+if (importTriggerBtn) {
   importTriggerBtn.addEventListener('click', () => {
-    importTextInput.value = '';
-    importModal.style.display = 'flex';
+    importFileInput.click();
   });
 }
 
-// キャンセルボタン
-if (importCancelBtn && importModal) {
-  importCancelBtn.addEventListener('click', () => {
-    importModal.style.display = 'none';
-  });
-}
+// ファイル選択時の取り込み処理
+if (importFileInput) {
+  importFileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
 
-// 復元実行処理
-if (importExecuteBtn && importModal) {
-  importExecuteBtn.addEventListener('click', () => {
-    const rawText = importTextInput.value.trim();
-    if (!rawText) {
-      alert('テキストが入力されていません。');
-      return;
-    }
-
-    try {
-      const importedSpots = JSON.parse(rawText);
-      if (Array.isArray(importedSpots)) {
-        if (confirm('現在のデータを上書きして復元しますか？')) {
-          spots = importedSpots;
-          saveAndRender();
-          importModal.style.display = 'none';
-          alert('データを正常に復元しました！');
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const importedSpots = JSON.parse(event.target.result);
+        if (Array.isArray(importedSpots)) {
+          if (confirm('現在のデータを上書きして復元しますか？')) {
+            spots = importedSpots;
+            saveAndRender();
+            alert('データを正常に復元しました！');
+          }
+        } else {
+          alert('正しいバックアップファイルフォーマットではありません。');
         }
-      } else {
-        alert('データの形式が正しくありません。');
+      } catch (err) {
+        alert('ファイルの読み込みに失敗しました。ファイルが壊れているか形式が異なります。');
       }
-    } catch (err) {
-      alert('テキストの読み込みに失敗しました。正しいバックアップテキストを貼り付けてください。');
-    }
+    };
+    reader.readAsText(file, 'UTF-8');
+    e.target.value = ''; // リセット
   });
 }
