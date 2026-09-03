@@ -3,98 +3,27 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>家族旅行 プラン＆軌跡</title>
+  <title>Family Map</title>
   <link rel="stylesheet" href="style.css">
-
-  <!-- PWA用の設定読み込み -->
-    <link rel="manifest" href="manifest.json">
-    <script>
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('sw.js');
-      }
-    </script>
-
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#4A90E2">
 </head>
 <body>
-
   <header>
-    <h1>家族旅行 プラン＆軌跡</h1>
+    <h1>🗺️ Family Map</h1>
   </header>
 
   <main>
-    <!-- スポット登録フォーム -->
-    <section class="form-section">
+    <!-- 入力フォーム -->
+    <section class="form-container">
       <h2>新しいスポットを登録</h2>
-      <form id="spotForm">
+      <form id="spot-form">
+        
+        <!-- 地域選択 -->
         <div class="form-group">
-          <label for="title">スポット名 / 店名 *</label>
-          <input type="text" id="title" required placeholder="例: 博多ラーメン 〇〇">
-        </div>
-
-        <div class="form-group">
-          <label for="region">地域</label>
-          <select id="region">
-             <option value="">地域を選択してください</option>
-             <option value="北海道">北海道</option>
-             <option value="東北">東北</option>
-             <option value="関東">関東</option>
-             <option value="甲信越・北陸">甲信越・北陸</option>
-             <option value="東海">東海</option>
-             <option value="関西">関西</option>
-             <option value="中国">中国</option>
-             <option value="四国">四国</option>
-             <option value="九州・沖縄">九州・沖縄</option>
-          </select>
-       </div>
-
-       <div class="form-group">
-          <label for="pref">都道府県</label>
-          <select id="pref">
-             <option value="">先に地域を選択してください</option>
-          </select>
-        </div>
-
-      
-        <div class="form-group">
-          <label for="category">目的</label>
-          <select id="category">
-            <option value="観光">観光</option>
-            <option value="グルメ">グルメ</option>
-            <option value="温泉">温泉</option>
-            <option value="遊具・公園">遊具・公園</option>
-            <option value="その他">その他</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label for="status">状況</label>
-          <select id="status">
-            <option value="行ってみたい">行ってみたい</option>
-            <option value="行ったことがある">行ったことがある</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label for="memo">備考（費用・メモなど）</label>
-          <textarea id="memo" rows="2" placeholder="例: 入場料 大人1,000円、駐車場あり"></textarea>
-        </div>
-
-        <button type="submit" id="saveBtn">保存する</button>
-      </form>
-
-
-<!-- 絞り込み（フィルター）エリア -->
-      <div class="filter-section">
-        <h3>🔍 スポットを絞り込む</h3>
-        <div class="filter-group">
-          <select id="filterStatus">
-            <option value="all">すべてのステータス</option>
-            <option value="行った">行った</option>
-            <option value="行ってみたい">行ってみたい</option>
-          </select>
-
-          <select id="filterRegion">
-            <option value="all">すべての地域</option>
+          <label for="region">地域 <span class="required">*</span></label>
+          <select id="region" required>
+            <option value="">地域を選択してください</option>
             <option value="北海道">北海道</option>
             <option value="東北">東北</option>
             <option value="関東">関東</option>
@@ -106,16 +35,60 @@
             <option value="九州・沖縄">九州・沖縄</option>
           </select>
         </div>
-      </div>
 
+        <!-- 都道府県選択（地域選択によって中身が変わります） -->
+        <div class="form-group">
+          <label for="pref">都道府県 <span class="required">*</span></label>
+          <select id="pref" required>
+            <option value="">先に地域を選択してください</option>
+          </select>
+        </div>
 
+        <!-- スポット名 -->
+        <div class="form-group">
+          <label for="spot-name">スポット名 <span class="required">*</span></label>
+          <input type="text" id="spot-name" placeholder="例: 東京タワー" required>
+        </div>
+
+        <!-- 訪問日 -->
+        <div class="form-group">
+          <label for="visit-date">訪問日</label>
+          <input type="date" id="visit-date">
+        </div>
+
+        <!-- 星評価 -->
+        <div class="form-group">
+          <label for="rating">おすすめ度（星評価）</label>
+          <select id="rating">
+            <option value="5">★★★★★ (大満足)</option>
+            <option value="4">★★★★☆ (満足)</option>
+            <option value="3" selected>★★★☆☆ (普通)</option>
+            <option value="2">★★☆☆☆ (いまいち)</option>
+            <option value="1">★☆☆☆☆ (おすすめしない)</option>
+          </select>
+        </div>
+
+        <!-- Googleマップリンク -->
+        <div class="form-group">
+          <label for="map-link">Googleマップリンク (URL)</label>
+          <input type="url" id="map-link" placeholder="https://maps.app.goo.gl/...">
+        </div>
+
+        <!-- メモ -->
+        <div class="form-group">
+          <label for="spot-memo">メモ</label>
+          <textarea id="spot-memo" rows="3" placeholder="感想や注意点など"></textarea>
+        </div>
+
+        <button type="submit" id="save-btn">スポットを保存</button>
+      </form>
     </section>
 
-    <!-- 登録済みスポット一覧 -->
-    <section class="list-section">
-      <h2>スポット一覧</h2>
-      <div id="spotList" class="spot-list">
-        <!-- ここにJavaScriptでカードが追加されます -->
+    <!-- スポット一覧 -->
+    <section class="list-container">
+      <h2>登録したスポット一覧</h2>
+      <div id="spot-list">
+        <!-- JavaScriptでここにカードが追加されます -->
       </div>
     </section>
   </main>
@@ -123,5 +96,3 @@
   <script src="app.js"></script>
 </body>
 </html>
-
-

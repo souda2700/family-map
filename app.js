@@ -1,16 +1,12 @@
-// localStorage からデータ取得、なければ空配列
-let spots = JSON.parse(localStorage.getItem('mySpots')) || [];
+// Service Workerの登録 (PWA用)
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js')
+    .then(() => console.log('Service Worker Registered'))
+    .catch(err => console.error('Service Worker Registration Failed:', err));
+}
 
-// HTMLの要素を取得
-const spotForm = document.getElementById('spotForm');
-const spotList = document.getElementById('spotList');
-const regionSelect = document.getElementById('region');
-const prefSelect = document.getElementById('pref');
-const filterStatus = document.getElementById('filterStatus');
-const filterRegion = document.getElementById('filterRegion');
-
-// --- 全国47都道府県の連動データ ---
-const prefData = {
+// 地域と都道府県のマスターデータ
+const prefecturesByRegion = {
   "北海道": ["北海道"],
   "東北": ["青森県", "岩手県", "宮城県", "秋田県", "山形県", "福島県"],
   "関東": ["茨城県", "栃木県", "群馬県", "埼玉県", "千葉県", "東京都", "神奈川県"],
@@ -22,102 +18,129 @@ const prefData = {
   "九州・沖縄": ["福岡県", "佐賀県", "長崎県", "熊本県", "大分県", "宮崎県", "鹿児島県", "沖縄県"]
 };
 
-// --- 地域選択に応じた都道府県の動的変更 ---
-regionSelect.addEventListener('change', () => {
-  const selectedRegion = regionSelect.value;
-  prefSelect.innerHTML = '';
+// DOM要素の取得
+const spotForm = document.getElementById('spot-form');
+const regionInput = document.getElementById('region');
+const prefInput = document.getElementById('pref');
+const spotNameInput = document.getElementById('spot-name');
+const visitDateInput = document.getElementById('visit-date');
+const ratingInput = document.getElementById('rating');
+const mapLinkInput = document.getElementById('map-link');
+const spotMemoInput = document.getElementById('spot-memo');
+const spotListContainer = document.getElementById('spot-list');
 
-  if (!selectedRegion || !prefData[selectedRegion]) {
-    prefSelect.innerHTML = '<option value="">先に地域を選択してください</option>';
+// ローカルストレージからデータ取得
+let spots = JSON.parse(localStorage.getItem('familyMapSpots')) || [];
+
+// 地域選択が変わった時に都道府県のドロップダウンを更新する処理
+regionInput.addEventListener('change', () => {
+  const selectedRegion = regionInput.value;
+  prefInput.innerHTML = ''; // 一旦リセット
+
+  if (!selectedRegion) {
+    prefInput.innerHTML = '<option value="">先に地域を選択してください</option>';
     return;
   }
 
-  const defaultOption = document.createElement('option');
-  defaultOption.value = '';
-  defaultOption.textContent = '都道府県を選択してください';
-  prefSelect.appendChild(defaultOption);
-
-  prefData[selectedRegion].forEach(pref => {
-    const option = document.createElement('option');
-    option.value = pref;
-    option.textContent = pref;
-    prefSelect.appendChild(option);
+  const prefs = prefecturesByRegion[selectedRegion] || [];
+  prefInput.innerHTML = '<option value="">都道府県を選択してください</option>';
+  
+  prefs.forEach(pref => {
+    const opt = document.createElement('option');
+    opt.value = pref;
+    opt.textContent = pref;
+    prefInput.appendChild(opt);
   });
 });
 
-// --- スポット一覧の描画（フィルター機能付き） ---
-function renderSpots() {
-  spotList.innerHTML = '';
+// 初期表示
+renderSpots();
 
-  const selectedStatus = filterStatus.value;
-  const selectedRegion = filterRegion.value;
-
-  // 条件に合うスポットだけを抽出
-  const filteredSpots = spots.filter(spot => {
-    const matchStatus = (selectedStatus === 'all' || spot.status === selectedStatus);
-    const matchRegion = (selectedRegion === 'all' || spot.region === selectedRegion);
-    return matchStatus && matchRegion;
-  });
-
-  if (filteredSpots.length === 0) {
-    spotList.innerHTML = '<p style="text-align:center; color:#888;">該当するスポットはありません。</p>';
-    return;
-  }
-
-  filteredSpots.forEach((spot, index) => {
-    const card = document.createElement('div');
-    card.className = 'spot-card';
-
-    const statusClass = spot.status === '行った' ? 'status-visited' : 'status-wish';
-
-    card.innerHTML = `
-      <div class="card-header">
-        <h3>${spot.title}</h3>
-        <span class="status-badge ${statusClass}">${spot.status}</span>
-      </div>
-      <p><strong>場所:</strong> ${spot.region} ${spot.pref}</p>
-      <p><strong>メモ:</strong> ${spot.memo || 'なし'}</p>
-      <div class="card-footer">
-        <button class="delete-btn" onclick="deleteSpot(${index})">🗑️ 削除</button>
-      </div>
-    `;
-
-    spotList.appendChild(card);
-  });
-}
-
-// --- フォーム送信時の登録処理 ---
+// フォーム送信時の処理
 spotForm.addEventListener('submit', (e) => {
   e.preventDefault();
 
   const newSpot = {
-    title: document.getElementById('title').value,
-    status: document.getElementById('status').value,
-    region: document.getElementById('region').value,
-    pref: document.getElementById('pref').value,
-    memo: document.getElementById('memo').value
+    id: Date.now(),
+    region: regionInput.value,
+    pref: prefInput.value,
+    name: spotNameInput.value.trim(),
+    visitDate: visitDateInput.value,
+    rating: parseInt(ratingInput.value, 10),
+    mapLink: mapLinkInput.value.trim(),
+    memo: spotMemoInput.value.trim()
   };
 
-  spots.push(newSpot);
-  localStorage.setItem('mySpots', JSON.stringify(spots));
+  spots.unshift(newSpot); // 新しいものを先頭に追加
+  saveAndRender();
 
+  // フォームのリセットと都道府県の選択肢リセット
   spotForm.reset();
-  prefSelect.innerHTML = '<option value="">先に地域を選択してください</option>';
-  renderSpots();
+  prefInput.innerHTML = '<option value="">先に地域を選択してください</option>';
 });
 
-// --- 削除処理 ---
-function deleteSpot(index) {
-  if (confirm('このスポットを削除しますか？')) {
-    spots.splice(index, 1);
-    localStorage.setItem('mySpots', JSON.stringify(spots));
-    renderSpots();
+// データの保存と画面再描画
+function saveAndRender() {
+  localStorage.setItem('familyMapSpots', JSON.stringify(spots));
+  renderSpots();
+}
+
+// スポット削除処理
+function deleteSpot(id) {
+  if (confirm('このスポットを削除してもよろしいですか？')) {
+    spots = spots.filter(spot => spot.id !== id);
+    saveAndRender();
   }
 }
 
-// --- フィルター切り替えイベント ---
-filterStatus.addEventListener('change', renderSpots);
-filterRegion.addEventListener('change', renderSpots);
+// 画面描画処理
+function renderSpots() {
+  spotListContainer.innerHTML = '';
 
-// 初期表示
-renderSpots();
+  if (spots.length === 0) {
+    spotListContainer.innerHTML = '<p style="color:#888; text-align:center;">まだ登録されたスポットはありません。</p>';
+    return;
+  }
+
+  spots.forEach(spot => {
+    const card = document.createElement('div');
+    card.className = 'spot-card';
+
+    // 星の文字列作成
+    const stars = '★'.repeat(spot.rating) + '☆'.repeat(5 - spot.rating);
+
+    // 日付フォーマット
+    const formattedDate = spot.visitDate ? `📅 ${spot.visitDate}` : '📅 日未設定';
+
+    // 地域・都道府県の表示
+    const locationText = spot.pref ? `📍 [${spot.pref}]` : (spot.region ? `📍 [${spot.region}]` : '');
+
+    card.innerHTML = `
+      <button class="btn-delete" onclick="deleteSpot(${spot.id})">✕</button>
+      <h3>${escapeHtml(locationText)} ${escapeHtml(spot.name)}</h3>
+      <div class="spot-meta">
+        <span>${formattedDate}</span>
+        <span class="spot-rating">${stars}</span>
+      </div>
+      ${spot.memo ? `<p class="spot-memo">${escapeHtml(spot.memo)}</p>` : ''}
+      ${spot.mapLink ? `<a href="${escapeHtml(spot.mapLink)}" target="_blank" rel="noopener noreferrer" class="btn-map">📍 Googleマップで見る</a>` : ''}
+    `;
+
+    spotListContainer.appendChild(card);
+  });
+}
+
+// XSS対策のエスケープ関数
+function escapeHtml(str) {
+  if (!str) return '';
+  return str.replace(/[&<>"']/g, function(match) {
+    const escapeMap = {
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;'
+    };
+    return escapeMap[match];
+  });
+}
