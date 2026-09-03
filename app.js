@@ -23,11 +23,18 @@ const spotForm = document.getElementById('spot-form');
 const regionInput = document.getElementById('region');
 const prefInput = document.getElementById('pref');
 const spotNameInput = document.getElementById('spot-name');
+const categoryInput = document.getElementById('category');
 const visitDateInput = document.getElementById('visit-date');
 const ratingInput = document.getElementById('rating');
 const mapLinkInput = document.getElementById('map-link');
 const spotMemoInput = document.getElementById('spot-memo');
+
+// 検索・絞り込み要素
+const searchRegionInput = document.getElementById('search-region');
+const searchCategoryInput = document.getElementById('search-category');
 const searchInput = document.getElementById('search-input');
+const clearFilterBtn = document.getElementById('clear-filter-btn');
+
 const spotListContainer = document.getElementById('spot-list');
 
 // ローカルストレージからデータ取得
@@ -54,10 +61,20 @@ regionInput.addEventListener('change', () => {
   });
 });
 
-// 検索入力時のリアルタイム絞り込み処理
-searchInput.addEventListener('input', () => {
-  renderSpots();
-});
+// 絞り込み条件の変更イベント設定
+if (searchRegionInput) searchRegionInput.addEventListener('change', renderSpots);
+if (searchCategoryInput) searchCategoryInput.addEventListener('change', renderSpots);
+if (searchInput) searchInput.addEventListener('input', renderSpots);
+
+// 絞り込みクリアボタン
+if (clearFilterBtn) {
+  clearFilterBtn.addEventListener('click', () => {
+    searchRegionInput.value = '';
+    searchCategoryInput.value = '';
+    searchInput.value = '';
+    renderSpots();
+  });
+}
 
 // 初期表示
 renderSpots();
@@ -71,13 +88,15 @@ spotForm.addEventListener('submit', (e) => {
     region: regionInput.value,
     pref: prefInput.value,
     name: spotNameInput.value.trim(),
+    category: categoryInput.value,
     visitDate: visitDateInput.value,
     rating: parseInt(ratingInput.value, 10),
     mapLink: mapLinkInput.value.trim(),
     memo: spotMemoInput.value.trim()
   };
 
-  spots.unshift(newSpot); // 新しいものを先頭に追加
+  // 配列の先頭に新しいスポットを追加
+  spots.unshift(newSpot);
   saveAndRender();
 
   // フォームのリセットと都道府県の選択肢リセット
@@ -103,25 +122,38 @@ function deleteSpot(id) {
 function renderSpots() {
   spotListContainer.innerHTML = '';
 
+  // 絞り込み条件の取得
+  const selectedRegion = searchRegionInput ? searchRegionInput.value : '';
+  const selectedCategory = searchCategoryInput ? searchCategoryInput.value : '';
   const keyword = searchInput ? searchInput.value.trim().toLowerCase() : '';
 
-  // 検索キーワードでフィルター処理
+  // 絞り込みフィルター処理
   const filteredSpots = spots.filter(spot => {
-    if (!keyword) return true;
-    
-    const nameMatch = spot.name && spot.name.toLowerCase().includes(keyword);
-    const prefMatch = spot.pref && spot.pref.toLowerCase().includes(keyword);
-    const regionMatch = spot.region && spot.region.toLowerCase().includes(keyword);
-    const memoMatch = spot.memo && spot.memo.toLowerCase().includes(keyword);
-
-    return nameMatch || prefMatch || regionMatch || memoMatch;
+    // 地域で絞り込み
+    if (selectedRegion && spot.region !== selectedRegion) {
+      return false;
+    }
+    // 目的・カテゴリで絞り込み
+    if (selectedCategory && spot.category !== selectedCategory) {
+      return false;
+    }
+    // フリーワード（名前・都道府県・メモ）で絞り込み
+    if (keyword) {
+      const nameMatch = spot.name && spot.name.toLowerCase().includes(keyword);
+      const prefMatch = spot.pref && spot.pref.toLowerCase().includes(keyword);
+      const memoMatch = spot.memo && spot.memo.toLowerCase().includes(keyword);
+      if (!nameMatch && !prefMatch && !memoMatch) {
+        return false;
+      }
+    }
+    return true;
   });
 
   if (filteredSpots.length === 0) {
-    if (keyword) {
-      spotListContainer.innerHTML = '<p style="color:#888; text-align:center;">該当するスポットが見つかりませんでした。</p>';
+    if (selectedRegion || selectedCategory || keyword) {
+      spotListContainer.innerHTML = '<p style="color:#888; text-align:center; padding: 20px 0;">条件に一致するスポットが見つかりませんでした。</p>';
     } else {
-      spotListContainer.innerHTML = '<p style="color:#888; text-align:center;">まだ登録されたスポットはありません。</p>';
+      spotListContainer.innerHTML = '<p style="color:#888; text-align:center; padding: 20px 0;">まだ登録されたスポットはありません。</p>';
     }
     return;
   }
@@ -139,9 +171,12 @@ function renderSpots() {
     // 地域・都道府県の表示
     const locationText = spot.pref ? `📍 [${spot.pref}]` : (spot.region ? `📍 [${spot.region}]` : '');
 
+    // カテゴリタグ
+    const categoryTag = spot.category ? `<span class="spot-tag">${escapeHtml(spot.category)}</span>` : '';
+
     card.innerHTML = `
       <button class="btn-delete" onclick="deleteSpot(${spot.id})">✕</button>
-      <h3>${escapeHtml(locationText)} ${escapeHtml(spot.name)}</h3>
+      <h3>${escapeHtml(locationText)} ${escapeHtml(spot.name)} ${categoryTag}</h3>
       <div class="spot-meta">
         <span>${formattedDate}</span>
         <span class="spot-rating">${stars}</span>

@@ -50,6 +50,22 @@
           <input type="text" id="spot-name" placeholder="例: 東京タワー" required>
         </div>
 
+        <!-- 目的 / カテゴリ -->
+        <div class="form-group">
+          <label for="category">目的・ジャンル</label>
+          <select id="category">
+            <option value="">指定なし</option>
+            <option value="観光・絶景">観光・絶景</option>
+            <option value="グルメ・カフェ">グルメ・カフェ</option>
+            <option value="温泉・宿泊">温泉・宿泊</option>
+            <option value="ショッピング">ショッピング</option>
+            <option value="体験・アクティビティ">体験・アクティビティ</option>
+            <option value="歴史・神社仏閣">歴史・神社仏閣</option>
+            <option value="公園・テーマパーク">公園・テーマパーク</option>
+            <option value="その他">その他</option>
+          </select>
+        </div>
+
         <!-- 訪問日 -->
         <div class="form-group">
           <label for="visit-date">訪問日</label>
@@ -84,13 +100,53 @@
       </form>
     </section>
 
-    <!-- スポット一覧・検索 -->
+    <!-- スポット一覧・条件絞り込み検索 -->
     <section class="list-container">
       <h2>登録したスポット一覧</h2>
       
-      <!-- 🔍 検索ボックス -->
-      <div class="form-group">
-        <input type="text" id="search-input" placeholder="🔍 スポット名・都道府県・メモで検索...">
+      <!-- 🔍 条件絞り込みエリア -->
+      <div class="filter-box">
+        <p class="filter-title">🔍 スポットを絞り込む</p>
+
+        <div class="filter-grid">
+          <div class="form-group">
+            <label for="search-region">地域で選ぶ</label>
+            <select id="search-region">
+              <option value="">すべての地域</option>
+              <option value="北海道">北海道</option>
+              <option value="東北">東北</option>
+              <option value="関東">関東</option>
+              <option value="甲信越・北陸">甲信越・北陸</option>
+              <option value="東海">東海</option>
+              <option value="関西">関西</option>
+              <option value="中国">中国</option>
+              <option value="四国">四国</option>
+              <option value="九州・沖縄">九州・沖縄</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="search-category">目的で選ぶ</label>
+            <select id="search-category">
+              <option value="">すべての目的</option>
+              <option value="観光・絶景">観光・絶景</option>
+              <option value="グルメ・カフェ">グルメ・カフェ</option>
+              <option value="温泉・宿泊">温泉・宿泊</option>
+              <option value="ショッピング">ショッピング</option>
+              <option value="体験・アクティビティ">体験・アクティビティ</option>
+              <option value="歴史・神社仏閣">歴史・神社仏閣</option>
+              <option value="公園・テーマパーク">公園・テーマパーク</option>
+              <option value="その他">その他</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="search-input">フリーワード検索（名前・メモ等）</label>
+          <input type="text" id="search-input" placeholder="キーワードを入力...">
+        </div>
+
+        <button type="button" id="clear-filter-btn">絞り込みをクリア</button>
       </div>
 
       <div id="spot-list">
