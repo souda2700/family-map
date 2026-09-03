@@ -36,7 +36,7 @@
           </select>
         </div>
 
-        <!-- 都道府県選択（地域選択によって中身が変わります） -->
+        <!-- 都道府県選択 -->
         <div class="form-group">
           <label for="pref">都道府県 <span class="required">*</span></label>
           <select id="pref" required>
@@ -84,9 +84,15 @@
       </form>
     </section>
 
-    <!-- スポット一覧 -->
+    <!-- スポット一覧・検索 -->
     <section class="list-container">
       <h2>登録したスポット一覧</h2>
+      
+      <!-- 🔍 検索ボックス -->
+      <div class="form-group">
+        <input type="text" id="search-input" placeholder="🔍 スポット名・都道府県・メモで検索...">
+      </div>
+
       <div id="spot-list">
         <!-- JavaScriptでここにカードが追加されます -->
       </div>

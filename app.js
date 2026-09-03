@@ -27,6 +27,7 @@ const visitDateInput = document.getElementById('visit-date');
 const ratingInput = document.getElementById('rating');
 const mapLinkInput = document.getElementById('map-link');
 const spotMemoInput = document.getElementById('spot-memo');
+const searchInput = document.getElementById('search-input');
 const spotListContainer = document.getElementById('spot-list');
 
 // ローカルストレージからデータ取得
@@ -51,6 +52,11 @@ regionInput.addEventListener('change', () => {
     opt.textContent = pref;
     prefInput.appendChild(opt);
   });
+});
+
+// 検索入力時のリアルタイム絞り込み処理
+searchInput.addEventListener('input', () => {
+  renderSpots();
 });
 
 // 初期表示
@@ -97,12 +103,30 @@ function deleteSpot(id) {
 function renderSpots() {
   spotListContainer.innerHTML = '';
 
-  if (spots.length === 0) {
-    spotListContainer.innerHTML = '<p style="color:#888; text-align:center;">まだ登録されたスポットはありません。</p>';
+  const keyword = searchInput ? searchInput.value.trim().toLowerCase() : '';
+
+  // 検索キーワードでフィルター処理
+  const filteredSpots = spots.filter(spot => {
+    if (!keyword) return true;
+    
+    const nameMatch = spot.name && spot.name.toLowerCase().includes(keyword);
+    const prefMatch = spot.pref && spot.pref.toLowerCase().includes(keyword);
+    const regionMatch = spot.region && spot.region.toLowerCase().includes(keyword);
+    const memoMatch = spot.memo && spot.memo.toLowerCase().includes(keyword);
+
+    return nameMatch || prefMatch || regionMatch || memoMatch;
+  });
+
+  if (filteredSpots.length === 0) {
+    if (keyword) {
+      spotListContainer.innerHTML = '<p style="color:#888; text-align:center;">該当するスポットが見つかりませんでした。</p>';
+    } else {
+      spotListContainer.innerHTML = '<p style="color:#888; text-align:center;">まだ登録されたスポットはありません。</p>';
+    }
     return;
   }
 
-  spots.forEach(spot => {
+  filteredSpots.forEach(spot => {
     const card = document.createElement('div');
     card.className = 'spot-card';
 
