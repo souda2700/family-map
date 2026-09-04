@@ -23,7 +23,6 @@ const spotForm = document.getElementById('spot-form');
 const regionInput = document.getElementById('region');
 const prefInput = document.getElementById('pref');
 const spotNameInput = document.getElementById('spot-name');
-const categoryInput = document.getElementById('category');
 const visitDateInput = document.getElementById('visit-date');
 const ratingInput = document.getElementById('rating');
 const mapLinkInput = document.getElementById('map-link');
@@ -101,12 +100,16 @@ renderSpots();
 spotForm.addEventListener('submit', (e) => {
   e.preventDefault();
 
+  // チェックされた目的（ジャンル）をすべて配列で取得
+  const checkedCategories = Array.from(document.querySelectorAll('input[name="category"]:checked'))
+    .map(cb => cb.value);
+
   const newSpot = {
     id: Date.now(),
     region: regionInput.value,
     pref: prefInput.value,
     name: spotNameInput.value.trim(),
-    category: categoryInput.value,
+    categories: checkedCategories, // 配列として保存
     visitDate: visitDateInput.value,
     rating: parseInt(ratingInput.value, 10),
     mapLink: mapLinkInput.value.trim(),
@@ -150,7 +153,18 @@ function renderSpots() {
   const filteredSpots = spots.filter(spot => {
     if (selectedRegion && spot.region !== selectedRegion) return false;
     if (selectedPref && spot.pref !== selectedPref) return false;
-    if (selectedCategory && spot.category !== selectedCategory) return false;
+    
+    // 目的・ジャンルの絞り込み（旧データ単一文字列/新データ配列両方に対応）
+    if (selectedCategory) {
+      if (Array.isArray(spot.categories)) {
+        if (!spot.categories.includes(selectedCategory)) return false;
+      } else if (spot.category) {
+        if (spot.category !== selectedCategory) return false;
+      } else {
+        return false;
+      }
+    }
+
     if (keyword) {
       const nameMatch = spot.name && spot.name.toLowerCase().includes(keyword);
       const memoMatch = spot.memo && spot.memo.toLowerCase().includes(keyword);
@@ -175,11 +189,18 @@ function renderSpots() {
     const stars = '★'.repeat(spot.rating) + '☆'.repeat(5 - spot.rating);
     const formattedDate = spot.visitDate ? `📅 ${spot.visitDate}` : '📅 日未設定';
     const locationText = spot.pref ? `📍 [${spot.pref}]` : (spot.region ? `📍 [${spot.region}]` : '');
-    const categoryTag = spot.category ? `<span class="spot-tag">${escapeHtml(spot.category)}</span>` : '';
+    
+    // タグ表示（新フォーマット配列／旧フォーマット単一文字列の両対応）
+    let categoryTagsHtml = '';
+    if (Array.isArray(spot.categories) && spot.categories.length > 0) {
+      categoryTagsHtml = spot.categories.map(cat => `<span class="spot-tag">${escapeHtml(cat)}</span>`).join(' ');
+    } else if (spot.category) {
+      categoryTagsHtml = `<span class="spot-tag">${escapeHtml(spot.category)}</span>`;
+    }
 
     card.innerHTML = `
       <button class="btn-delete" onclick="deleteSpot(${spot.id})">✕</button>
-      <h3>${escapeHtml(locationText)} ${escapeHtml(spot.name)} ${categoryTag}</h3>
+      <h3>${escapeHtml(locationText)} ${escapeHtml(spot.name)} ${categoryTagsHtml}</h3>
       <div class="spot-meta">
         <span>${formattedDate}</span>
         <span class="spot-rating">${stars}</span>

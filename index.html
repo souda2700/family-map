@@ -50,20 +50,19 @@
           <input type="text" id="spot-name" placeholder="例: 東京タワー" required>
         </div>
 
-        <!-- 目的 / カテゴリ -->
+        <!-- 目的 / カテゴリ（複数選択対応） -->
         <div class="form-group">
-          <label for="category">目的・ジャンル</label>
-          <select id="category">
-            <option value="">指定なし</option>
-            <option value="観光・絶景">観光・絶景</option>
-            <option value="グルメ・カフェ">グルメ・カフェ</option>
-            <option value="温泉・宿泊">温泉・宿泊</option>
-            <option value="ショッピング">ショッピング</option>
-            <option value="体験・アクティビティ">体験・アクティビティ</option>
-            <option value="歴史・神社仏閣">歴史・神社仏閣</option>
-            <option value="公園・テーマパーク">公園・テーマパーク</option>
-            <option value="その他">その他</option>
-          </select>
+          <label>目的・ジャンル（複数選択可）</label>
+          <div class="checkbox-group">
+            <label class="checkbox-label"><input type="checkbox" name="category" value="観光・絶景"> 観光・絶景</label>
+            <label class="checkbox-label"><input type="checkbox" name="category" value="グルメ・カフェ"> グルメ・カフェ</label>
+            <label class="checkbox-label"><input type="checkbox" name="category" value="温泉・宿泊"> 温泉・宿泊</label>
+            <label class="checkbox-label"><input type="checkbox" name="category" value="ショッピング"> ショッピング</label>
+            <label class="checkbox-label"><input type="checkbox" name="category" value="体験・アクティビティ"> 体験・アクティビティ</label>
+            <label class="checkbox-label"><input type="checkbox" name="category" value="歴史・神社仏閣"> 歴史・神社仏閣</label>
+            <label class="checkbox-label"><input type="checkbox" name="category" value="公園・テーマパーク"> 公園・テーマパーク</label>
+            <label class="checkbox-label"><input type="checkbox" name="category" value="その他"> その他</label>
+          </div>
         </div>
 
         <!-- 訪問日 -->
