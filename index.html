@@ -191,5 +191,111 @@
   </main>
 
   <script src="app.js"></script>
+
+<!-- ＝=============================================== -->
+<!-- 旅のしおり作成 モーダル                           -->
+<!-- ＝=============================================== -->
+<div id="itineraryModal" class="modal-backdrop hidden">
+  <div class="modal-content itinerary-modal-content">
+    <div class="modal-header">
+      <h2>📖 旅のしおりを自動作成</h2>
+      <button type="button" class="btn-close" onclick="closeItineraryModal()">✕</button>
+    </div>
+    
+    <form id="itineraryForm" onsubmit="generateItinerary(event)">
+      <div class="modal-body">
+        
+        <!-- 旅行日数の選択 -->
+        <div class="form-group">
+          <label>🗓 旅行日程</label>
+          <select id="itineraryDays" class="form-control" onchange="toggleItineraryDays()">
+            <option value="1">日帰り（1日）</option>
+            <option value="2" selected>1泊2日</option>
+            <option value="3">2泊3日</option>
+          </select>
+        </div>
+
+        <!-- 移動手段の選択 -->
+        <div class="form-group">
+          <label>🚗 主な移動手段</label>
+          <select id="itineraryTransport" class="form-control">
+            <option value="walk">🚶 徒歩</option>
+            <option value="bike">🚲 自転車（シェアサイクル）</option>
+            <option value="car" selected>🚗 自家用車 / レンタカー</option>
+            <option value="taxi">🚕 タクシー</option>
+            <option value="bus">🚌 公共バス</option>
+            <option value="train">🚃 電車</option>
+            <option value="shinkansen">🚄 新幹線 / 特急</option>
+            <option value="airplane">✈️ 飛行機</option>
+          </select>
+        </div>
+
+        <!-- 1日目の時間設定 -->
+        <div class="time-section-box">
+          <h4>【 1日目 】の時間設定</h4>
+          <div class="form-row">
+            <div class="form-group col">
+              <label>出発時間</label>
+              <input type="time" id="day1StartTime" class="form-control" value="09:00" required>
+            </div>
+            <div class="form-group col day1-hotel-group">
+              <label>宿チェックイン</label>
+              <input type="time" id="day1CheckinTime" class="form-control" value="17:30">
+            </div>
+          </div>
+        </div>
+
+        <!-- 2日目以降の時間設定（1泊以上の場合表示） -->
+        <div id="day2TimeSection" class="time-section-box">
+          <h4>【 2日目以降 】の時間設定</h4>
+          <div class="form-row">
+            <div class="form-group col">
+              <label>宿出発時間</label>
+              <input type="time" id="day2StartTime" class="form-control" value="09:00">
+            </div>
+            <div class="form-group col">
+              <label>最終日 帰着/解散時間</label>
+              <input type="time" id="finalEndTime" class="form-control" value="18:00">
+            </div>
+          </div>
+        </div>
+
+        <!-- マストスポットの滞在時間指定 -->
+        <div class="form-group">
+          <label>📌 マストスポットの滞在目安</label>
+          <div id="mustSpotStaySettings" class="must-spot-settings-list">
+            <!-- JavaScriptで動的生成されます -->
+          </div>
+        </div>
+
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeItineraryModal()">キャンセル</button>
+        <button type="submit" class="btn btn-primary">しおりを作成する ✨</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ＝=============================================== -->
+<!-- 完成したしおり表示 モーダル                        -->
+<!-- ＝=============================================== -->
+<div id="itineraryResultModal" class="modal-backdrop hidden">
+  <div class="modal-content itinerary-result-content">
+    <div class="modal-header">
+      <h2>✨ 完成した旅のしおり</h2>
+      <button type="button" class="btn-close" onclick="closeItineraryResultModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <!-- プレビューテキスト表示（コピー用） -->
+      <pre id="itineraryTextOutput" class="itinerary-text-preview"></pre>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-line" onclick="copyItineraryToClipboard()">📋 LINE用にテキストをコピー</button>
+      <button type="button" class="btn btn-secondary" onclick="closeItineraryResultModal()">閉じる</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>

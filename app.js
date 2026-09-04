@@ -408,3 +408,237 @@ if (importExecuteBtn) {
     }
   });
 }
+
+
+
+// ===============================================
+// 1. 移動手段ごとの速度（km/h）と準備・待ち時間（分）定義
+// ===============================================
+const TRANSPORT_SPEEDS = {
+  walk: { speed: 4, margin: 5 },       // 徒歩: 4km/h, 準備5分
+  bike: { speed: 12, margin: 5 },      // 自転車: 12km/h, 準備5分
+  car: { speed: 30, margin: 10 },      // 車: 一般道平均30km/h, 駐車等10分
+  taxi: { speed: 30, margin: 5 },      // タクシー: 30km/h, 迎車等5分
+  bus: { speed: 20, margin: 15 },      // バス: 20km/h, バス停・待ち15分
+  train: { speed: 35, margin: 15 },    // 電車: 35km/h, 乗換・待ち15分
+  shinkansen: { speed: 120, margin: 20 }, // 新幹線: 120km/h, 改札等20分
+  airplane: { speed: 300, margin: 60 }    // 飛行機: 300km/h, 保安検査等60分
+};
+
+// 2地点間（緯度経度）の直線距離から移動時間を概算（分単位）
+function calculateTravelTime(spotA, spotB, transportType) {
+  if (!spotA || !spotB || !spotA.lat || !spotA.lng || !spotB.lat || !spotB.lng) {
+    return 20; // 座標がない場合のデフォルト（20分）
+  }
+
+  // 2地点の距離（km）をハバーサイン公式で計算
+  const R = 6371;
+  const dLat = (spotB.lat - spotA.lat) * Math.PI / 180;
+  const dLng = (spotB.lng - spotA.lng) * Math.PI / 180;
+  const a = 
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(spotA.lat * Math.PI / 180) * Math.cos(spotB.lat * Math.PI / 180) * 
+    Math.sin(dLng/2) * Math.sin(dLng/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  const distanceKm = R * c;
+
+  const transport = TRANSPORT_SPEEDS[transportType] || TRANSPORT_SPEEDS.car;
+  // 道路・ルート補正係数（直線距離の約1.4倍と仮定）
+  const actualDistance = distanceKm * 1.4;
+  
+  // 移動時間（分）= (距離 / 速度) * 60 + 準備時間
+  let minutes = Math.round((actualDistance / transport.speed) * 60) + transport.margin;
+  
+  // 最低移動時間は10分に設定
+  return Math.max(10, minutes);
+}
+
+// 時刻の加算ヘルパー (例: "09:00" + 90分 -> "10:30")
+function addMinutesToTime(timeStr, minsToAdd) {
+  const [h, m] = timeStr.split(':').map(Number);
+  const date = new Date();
+  date.setHours(h, m + minsToAdd, 0, 0);
+  const resH = String(date.getHours()).padStart(2, '0');
+  const resM = String(date.getMinutes()).padStart(2, '0');
+  return `${resH}:${resM}`;
+}
+
+// 2つの時刻の差分（分）を計算 (例: "09:00", "11:30" -> 150分)
+function getTimeDifferenceMinutes(startStr, endStr) {
+  const [sh, sm] = startStr.split(':').map(Number);
+  const [eh, em] = endStr.split(':').map(Number);
+  return (eh * 60 + em) - (sh * 60 + sm);
+}
+
+// ===============================================
+// 2. しおり作成モーダルの表示・制御
+// ===============================================
+function openItineraryModal() {
+  const modal = document.getElementById('itineraryModal');
+  const listContainer = document.getElementById('mustSpotStaySettings');
+  listContainer.innerHTML = '';
+
+  // 現在登録されているスポットからマストスポット（★マスト）を抽出
+  const spots = getSavedSpots(); // 既存のスポット取得関数
+  const mustSpots = spots.filter(s => s.isMust);
+
+  if (mustSpots.length === 0) {
+    alert('マストスポット（★）が登録されていません。スポット登録画面で★マストをセットしてください。');
+    return;
+  }
+
+  mustSpots.forEach((spot, idx) => {
+    const row = document.createElement('div');
+    row.className = 'must-spot-row';
+    row.innerHTML = `
+      <span class="spot-title">📍 ${spot.name}</span>
+      <select class="form-control spot-stay-time" data-spot-id="${spot.id}">
+        <option value="30">30分</option>
+        <option value="60" selected>1時間</option>
+        <option value="90">1時間30分</option>
+        <option value="120">2時間</option>
+        <option value="180">3時間</option>
+      </select>
+    `;
+    listContainer.appendChild(row);
+  });
+
+  toggleItineraryDays();
+  modal.classList.remove('hidden');
+}
+
+function closeItineraryModal() {
+  document.getElementById('itineraryModal').classList.add('hidden');
+}
+
+function toggleItineraryDays() {
+  const days = document.getElementById('itineraryDays').value;
+  const day2Section = document.getElementById('day2TimeSection');
+  const hotelGroup = document.querySelector('.day1-hotel-group');
+
+  if (days === "1") {
+    day2Section.style.display = 'none';
+    if (hotelGroup) hotelGroup.style.display = 'none';
+  } else {
+    day2Section.style.display = 'block';
+    if (hotelGroup) hotelGroup.style.display = 'block';
+  }
+}
+
+// ===============================================
+// 3. しおり自動作成ロジックの実行
+// ===============================================
+function generateItinerary(event) {
+  event.preventDefault();
+
+  const days = parseInt(document.getElementById('itineraryDays').value);
+  const transport = document.getElementById('itineraryTransport').value;
+  const day1Start = document.getElementById('day1StartTime').value;
+  const day1Checkin = document.getElementById('day1CheckinTime').value;
+  const day2Start = document.getElementById('day2StartTime').value;
+  const finalEnd = document.getElementById('finalEndTime').value;
+
+  const spots = getSavedSpots();
+  const mustSpots = spots.filter(s => s.isMust);
+  const subSpots = spots.filter(s => !s.isMust);
+
+  // マストスポットの滞在時間設定を取得
+  const stayTimeInputs = document.querySelectorAll('.spot-stay-time');
+  const stayTimeMap = {};
+  stayTimeInputs.forEach(input => {
+    stayTimeMap[input.dataset.spotId] = parseInt(input.value);
+  });
+
+  let outputText = `========================================\n`;
+  outputText += ` 📖 旅のしおり（${days === 1 ? '日帰り' : days + '泊' + (days+1) + '日'}）\n`;
+  outputText += ` 移動手段: ${getTransportLabel(transport)}\n`;
+  outputText += `========================================\n\n`;
+
+  let mustIndex = 0;
+  let subIndex = 0;
+
+  for (let d = 1; d <= days; d++) {
+    outputText += `--- 【 ${d}日目 】 ------------------------\n\n`;
+    
+    let currentTime = (d === 1) ? day1Start : day2Start;
+    let endTimeLimit = (d === days) ? finalEnd : day1Checkin;
+
+    outputText += `【 ${currentTime} 】 出発\n`;
+
+    let prevSpot = null;
+
+    while (getTimeDifferenceMinutes(currentTime, endTimeLimit) > 40) {
+      let currentSpot = null;
+      let stayMins = 60;
+      let isMust = false;
+
+      // マストスポットが残っていれば優先割り当て
+      if (mustIndex < mustSpots.length) {
+        currentSpot = mustSpots[mustIndex];
+        stayMins = stayTimeMap[currentSpot.id] || 60;
+        mustIndex++;
+        isMust = true;
+      } else if (subIndex < subSpots.length) {
+        // 隙間埋めスポット割り当て
+        currentSpot = subSpots[subIndex];
+        stayMins = 45;
+        subIndex++;
+      } else {
+        break; // 配置可能なスポットが終了
+      }
+
+      // 前のスポットからの移動時間を自動計算
+      let travelMins = prevSpot ? calculateTravelTime(prevSpot, currentSpot, transport) : 15;
+      
+      let arrivalTime = addMinutesToTime(currentTime, travelMins);
+      let departureTime = addMinutesToTime(arrivalTime, stayMins);
+
+      // 制限時間を超えてしまう場合は終了
+      if (getTimeDifferenceMinutes(departureTime, endTimeLimit) < 0) {
+        break;
+      }
+
+      // ルートナビURLの生成 (Google Maps)
+      let mapUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(currentSpot.name)}`;
+
+      outputText += `   ↓ 🚗 移動（約${travelMins}分）\n`;
+      outputText += `【 ${arrivalTime} - ${departureTime} 】 ${currentSpot.name} [★${currentSpot.rating || '3.5'}] ${isMust ? '★マスト' : '(立ち寄り)'}\n`;
+      outputText += `   📍マップ: ${mapUrl}\n`;
+
+      currentTime = departureTime;
+      prevSpot = currentSpot;
+    }
+
+    if (d < days || days === 1) {
+      outputText += `   ↓ 🚗 移動\n`;
+      outputText += `【 ${endTimeLimit} 】 ${days > 1 && d === 1 ? '🏨 宿チェックイン' : '🎉 到着・解散'}\n\n`;
+    }
+  }
+
+  document.getElementById('itineraryTextOutput').textContent = outputText;
+  closeItineraryModal();
+  document.getElementById('itineraryResultModal').classList.remove('hidden');
+}
+
+// テキストコピー処理
+function copyItineraryToClipboard() {
+  const text = document.getElementById('itineraryTextOutput').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    alert('📋 LINE用にしおりのテキストをコピーしました！');
+  }).catch(err => {
+    alert('コピーに失敗しました。直接テキストを選択してコピーしてください。');
+  });
+}
+
+function closeItineraryResultModal() {
+  document.getElementById('itineraryResultModal').classList.add('hidden');
+}
+
+function getTransportLabel(type) {
+  const labels = {
+    walk: '🚶 徒歩', bike: '🚲 自転車', car: '🚗 自家用車/レンタカー',
+    taxi: '🚕 タクシー', bus: '🚌 公共バス', train: '🚃 電車',
+    shinkansen: '🚄 新幹線/特急', airplane: '✈️ 飛行機'
+  };
+  return labels[type] || '🚗 車';
+}
