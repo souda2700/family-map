@@ -227,3 +227,42 @@ button#save-btn:hover {
   margin-right: 6px;
   cursor: pointer;
 }
+
+
+/* アクションボタン（HP検索・マップ）の整列 */
+.spot-action-btns {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.btn-action {
+  flex: 1;
+  text-align: center;
+  padding: 8px 10px;
+  font-size: 0.8rem;
+  font-weight: bold;
+  text-decoration: none;
+  border-radius: 6px;
+  transition: background 0.2s;
+}
+
+.btn-hp {
+  background-color: #2b6cb0;
+  color: white;
+}
+
+.btn-hp:hover {
+  background-color: #2c5282;
+}
+
+.btn-map {
+  background-color: #38a169;
+  color: white;
+  margin-top: 0 !important; /* 以前のスタイル上書き */
+  display: inline-block !important;
+}
+
+.btn-map:hover {
+  background-color: #2f855a;
+}

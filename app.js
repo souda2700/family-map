@@ -109,7 +109,7 @@ spotForm.addEventListener('submit', (e) => {
     region: regionInput.value,
     pref: prefInput.value,
     name: spotNameInput.value.trim(),
-    categories: checkedCategories, // 配列として保存
+    categories: checkedCategories,
     visitDate: visitDateInput.value,
     rating: parseInt(ratingInput.value, 10),
     mapLink: mapLinkInput.value.trim(),
@@ -154,7 +154,6 @@ function renderSpots() {
     if (selectedRegion && spot.region !== selectedRegion) return false;
     if (selectedPref && spot.pref !== selectedPref) return false;
     
-    // 目的・ジャンルの絞り込み（旧データ単一文字列/新データ配列両方に対応）
     if (selectedCategory) {
       if (Array.isArray(spot.categories)) {
         if (!spot.categories.includes(selectedCategory)) return false;
@@ -190,13 +189,21 @@ function renderSpots() {
     const formattedDate = spot.visitDate ? `📅 ${spot.visitDate}` : '📅 日未設定';
     const locationText = spot.pref ? `📍 [${spot.pref}]` : (spot.region ? `📍 [${spot.region}]` : '');
     
-    // タグ表示（新フォーマット配列／旧フォーマット単一文字列の両対応）
+    // タグ表示
     let categoryTagsHtml = '';
     if (Array.isArray(spot.categories) && spot.categories.length > 0) {
       categoryTagsHtml = spot.categories.map(cat => `<span class="spot-tag">${escapeHtml(cat)}</span>`).join(' ');
     } else if (spot.category) {
       categoryTagsHtml = `<span class="spot-tag">${escapeHtml(spot.category)}</span>`;
     }
+
+    // Googleマップリンクの決定（手動入力が無ければ自動検索URLを生成）
+    const mapUrl = spot.mapLink 
+      ? spot.mapLink 
+      : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((spot.pref || '') + ' ' + spot.name)}`;
+
+    // HP・公式検索用URL（「[都道府県] [スポット名] 公式」で検索）
+    const hpSearchUrl = `https://www.google.com/search?q=${encodeURIComponent((spot.pref || '') + ' ' + spot.name + ' 公式')}`;
 
     card.innerHTML = `
       <button class="btn-delete" onclick="deleteSpot(${spot.id})">✕</button>
@@ -206,7 +213,10 @@ function renderSpots() {
         <span class="spot-rating">${stars}</span>
       </div>
       ${spot.memo ? `<p class="spot-memo">${escapeHtml(spot.memo)}</p>` : ''}
-      ${spot.mapLink ? `<a href="${escapeHtml(spot.mapLink)}" target="_blank" rel="noopener noreferrer" class="btn-map">📍 Googleマップで見る</a>` : ''}
+      <div class="spot-action-btns">
+        <a href="${escapeHtml(hpSearchUrl)}" target="_blank" rel="noopener noreferrer" class="btn-action btn-hp">🌐 HP・詳細を見る</a>
+        <a href="${escapeHtml(mapUrl)}" target="_blank" rel="noopener noreferrer" class="btn-action btn-map">📍 マップで見る</a>
+      </div>
     `;
 
     spotListContainer.appendChild(card);
