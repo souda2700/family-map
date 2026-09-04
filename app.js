@@ -148,25 +148,13 @@ function renderSpots() {
 
   // 絞り込みフィルター処理
   const filteredSpots = spots.filter(spot => {
-    // 地域で絞り込み
-    if (selectedRegion && spot.region !== selectedRegion) {
-      return false;
-    }
-    // 都道府県で絞り込み
-    if (selectedPref && spot.pref !== selectedPref) {
-      return false;
-    }
-    // 目的・カテゴリで絞り込み
-    if (selectedCategory && spot.category !== selectedCategory) {
-      return false;
-    }
-    // フリーワード（名前・メモ等）で絞り込み
+    if (selectedRegion && spot.region !== selectedRegion) return false;
+    if (selectedPref && spot.pref !== selectedPref) return false;
+    if (selectedCategory && spot.category !== selectedCategory) return false;
     if (keyword) {
       const nameMatch = spot.name && spot.name.toLowerCase().includes(keyword);
       const memoMatch = spot.memo && spot.memo.toLowerCase().includes(keyword);
-      if (!nameMatch && !memoMatch) {
-        return false;
-      }
+      if (!nameMatch && !memoMatch) return false;
     }
     return true;
   });
@@ -184,16 +172,9 @@ function renderSpots() {
     const card = document.createElement('div');
     card.className = 'spot-card';
 
-    // 星の文字列作成
     const stars = '★'.repeat(spot.rating) + '☆'.repeat(5 - spot.rating);
-
-    // 日付フォーマット
     const formattedDate = spot.visitDate ? `📅 ${spot.visitDate}` : '📅 日未設定';
-
-    // 地域・都道府県の表示
     const locationText = spot.pref ? `📍 [${spot.pref}]` : (spot.region ? `📍 [${spot.region}]` : '');
-
-    // カテゴリタグ
     const categoryTag = spot.category ? `<span class="spot-tag">${escapeHtml(spot.category)}</span>` : '';
 
     card.innerHTML = `
@@ -227,11 +208,14 @@ function escapeHtml(str) {
 }
 
 // ==========================================
-// 💾 データ管理（バックアップ・復元）処理
+// 💾 データ管理（バックアップ・手動テキスト復元）処理
 // ==========================================
 const exportBtn = document.getElementById('export-btn');
 const importTriggerBtn = document.getElementById('import-trigger-btn');
-const importFileInput = document.getElementById('import-file');
+const importModal = document.getElementById('import-modal');
+const importTextInput = document.getElementById('import-text-input');
+const importExecuteBtn = document.getElementById('import-execute-btn');
+const importCancelBtn = document.getElementById('import-cancel-btn');
 
 // データ出力 (JSONファイルダウンロード)
 if (exportBtn) {
@@ -249,42 +233,48 @@ if (exportBtn) {
     downloadAnchor.click();
     downloadAnchor.remove();
 
-    // 保存完了のメッセージを表示
     alert(`バックアップファイルを保存しました！\n（端末の「ダウンロード」フォルダをご確認ください）`);
   });
 }
 
-// データ取り込みボタンクリック時
-if (importTriggerBtn) {
+// 「データを復元 (取込)」ボタンクリック時：テキスト入力モーダルを表示
+if (importTriggerBtn && importModal) {
   importTriggerBtn.addEventListener('click', () => {
-    importFileInput.click();
+    importTextInput.value = ''; // 枠内をクリア
+    importModal.style.display = 'flex'; // モーダルを表示
   });
 }
 
-// ファイル選択時の取り込み処理
-if (importFileInput) {
-  importFileInput.addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+// モーダルの「キャンセル」ボタン
+if (importCancelBtn && importModal) {
+  importCancelBtn.addEventListener('click', () => {
+    importModal.style.display = 'none';
+  });
+}
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      try {
-        const importedSpots = JSON.parse(event.target.result);
-        if (Array.isArray(importedSpots)) {
-          if (confirm('現在のデータを上書きして復元しますか？')) {
-            spots = importedSpots;
-            saveAndRender();
-            alert('データを正常に復元しました！');
-          }
-        } else {
-          alert('正しいバックアップファイルフォーマットではありません。');
+// モーダルの「復元を実行」ボタン
+if (importExecuteBtn) {
+  importExecuteBtn.addEventListener('click', () => {
+    const jsonText = importTextInput.value.trim();
+    if (!jsonText) {
+      alert('テキストが入力されていません。コピーしたバックアップデータを貼り付けてください。');
+      return;
+    }
+
+    try {
+      const importedSpots = JSON.parse(jsonText);
+      if (Array.isArray(importedSpots)) {
+        if (confirm('現在のデータを上書きして復元しますか？')) {
+          spots = importedSpots;
+          saveAndRender();
+          importModal.style.display = 'none';
+          alert('データを正常に復元しました！');
         }
-      } catch (err) {
-        alert('ファイルの読み込みに失敗しました。ファイルが壊れているか形式が異なります。');
+      } else {
+        alert('正しいバックアップデータ形式ではありません。');
       }
-    };
-    reader.readAsText(file, 'UTF-8');
-    e.target.value = ''; // リセット
+    } catch (err) {
+      alert('データの読み込みに失敗しました。貼り付けたテキストが正しいかご確認ください。');
+    }
   });
 }
