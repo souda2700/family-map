@@ -59,6 +59,7 @@ label {
 
 input[type="text"],
 input[type="date"],
+input[type="time"],
 input[type="url"],
 select,
 textarea {
@@ -174,18 +175,6 @@ button#save-btn:hover {
   margin-bottom: 10px;
 }
 
-.btn-map {
-  display: inline-block;
-  background-color: #34a853;
-  color: white;
-  text-decoration: none;
-  padding: 6px 12px;
-  border-radius: 4px;
-  font-size: 0.85rem;
-  font-weight: bold;
-  margin-top: 5px;
-}
-
 .btn-delete {
   position: absolute;
   top: 12px;
@@ -200,7 +189,6 @@ button#save-btn:hover {
 .btn-delete:hover {
   color: #e74c3c;
 }
-
 
 /* チェックボックス（複数選択）用デザイン */
 .checkbox-group {
@@ -227,7 +215,6 @@ button#save-btn:hover {
   margin-right: 6px;
   cursor: pointer;
 }
-
 
 /* アクションボタン（HP検索・マップ）の整列 */
 .spot-action-btns {
@@ -259,15 +246,13 @@ button#save-btn:hover {
 .btn-map {
   background-color: #38a169;
   color: white;
-  margin-top: 0 !important; /* 以前のスタイル上書き */
+  margin-top: 0 !important;
   display: inline-block !important;
 }
 
 .btn-map:hover {
   background-color: #2f855a;
 }
-
-
 
 /* 現在地関連のスタイル */
 .btn-geo {
@@ -307,14 +292,114 @@ button#save-btn:hover {
   background-color: #c05621;
 }
 
+/* ===============================================
+   モーダル基本構造 & 非表示制御（追加）
+   =============================================== */
+.hidden {
+  display: none !important;
+}
 
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+  padding: 15px;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+  overflow: hidden;
+}
+
+.modal-header {
+  padding: 15px 20px;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.modal-header h2 {
+  margin: 0;
+  padding: 0;
+  border: none;
+  font-size: 1.1rem;
+}
+
+.btn-close {
+  background: none;
+  border: none;
+  font-size: 1.3rem;
+  color: #a0aec0;
+  cursor: pointer;
+}
+
+.btn-close:hover {
+  color: #4a5568;
+}
+
+.modal-body {
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.modal-footer {
+  padding: 12px 20px;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  background-color: #f7fafc;
+}
+
+/* モーダル用汎用ボタン */
+.btn {
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: bold;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-primary {
+  background-color: #f59e0b;
+  color: white;
+}
+
+.btn-primary:hover {
+  background-color: #d97706;
+}
+
+.btn-secondary {
+  background-color: #cbd5e0;
+  color: #4a5568;
+}
+
+.btn-secondary:hover {
+  background-color: #a0aec0;
+}
 
 /* ===============================================
    旅のしおりモーダル・タイムライン表示のスタイル
    =============================================== */
 .itinerary-modal-content {
   max-width: 600px;
-  width: 90%;
+  width: 100%;
 }
 
 .time-section-box {
@@ -378,7 +463,7 @@ button#save-btn:hover {
 /* しおり結果出力領域 */
 .itinerary-result-content {
   max-width: 650px;
-  width: 95%;
+  width: 100%;
 }
 
 .itinerary-text-preview {

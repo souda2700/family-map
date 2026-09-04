@@ -78,6 +78,7 @@ const visitDateInput = document.getElementById('visit-date');
 const ratingInput = document.getElementById('rating');
 const mapLinkInput = document.getElementById('map-link');
 const spotMemoInput = document.getElementById('spot-memo');
+const isMustInput = document.getElementById('is-must'); // ★追加: マストスポット用チェックボックス
 
 const searchRegionInput = document.getElementById('search-region');
 const searchPrefInput = document.getElementById('search-pref');
@@ -90,6 +91,11 @@ const spotListContainer = document.getElementById('spot-list');
 
 let spots = JSON.parse(localStorage.getItem('familyMapSpots')) || [];
 let currentPosition = null; // 現在地保持用
+
+// 【追加】既存コードとの互換用ヘルパー関数
+function getSavedSpots() {
+  return spots;
+}
 
 // 地域選択イベント
 regionInput.addEventListener('change', () => {
@@ -170,7 +176,7 @@ if (geoSortBtn) {
   });
 }
 
-// 2点間の距離（km）計算（ヒュベニの公式風概算）
+// 2点間の距離（km）計算
 function calculateDistance(lat1, lon1, lat2, lon2) {
   const R = 6371; // 地球の半径 (km)
   const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -185,21 +191,27 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
 
 renderSpots();
 
-// フォーム送信
+// フォーム送信（★修正: isMust と 座標情報 lat, lng を追加）
 spotForm.addEventListener('submit', (e) => {
   e.preventDefault();
 
   const checkedCategories = Array.from(document.querySelectorAll('input[name="category"]:checked'))
     .map(cb => cb.value);
 
+  const selectedPref = prefInput.value;
+  const coords = prefCoordinates[selectedPref] || { lat: 35.6895, lng: 139.6917 };
+
   const newSpot = {
-    id: Date.now(),
+    id: Date.now().toString(), // 文字列に変換してIDの不一致を防止
     region: regionInput.value,
-    pref: prefInput.value,
+    pref: selectedPref,
+    lat: coords.lat, // ★移動時間計算用に座標を追加
+    lng: coords.lng, // ★移動時間計算用に座標を追加
     name: spotNameInput.value.trim(),
     categories: checkedCategories,
     visitDate: visitDateInput.value,
     rating: parseInt(ratingInput.value, 10),
+    isMust: isMustInput ? isMustInput.checked : false, // ★マスト判定の保持
     mapLink: mapLinkInput.value.trim(),
     memo: spotMemoInput.value.trim()
   };
@@ -218,7 +230,7 @@ function saveAndRender() {
 
 function deleteSpot(id) {
   if (confirm('このスポットを削除してもよろしいですか？')) {
-    spots = spots.filter(spot => spot.id !== id);
+    spots = spots.filter(spot => spot.id != id);
     saveAndRender();
   }
 }
@@ -284,7 +296,7 @@ function renderSpots() {
 
   filteredSpots.forEach(spot => {
     const card = document.createElement('div');
-    card.className = 'spot-card';
+    card.className = `spot-card ${spot.isMust ? 'must-card' : ''}`;
 
     const stars = '★'.repeat(spot.rating) + '☆'.repeat(5 - spot.rating);
     const formattedDate = spot.visitDate ? `📅 ${spot.visitDate}` : '📅 日未設定';
@@ -311,8 +323,8 @@ function renderSpots() {
     const routeUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent((spot.pref || '') + ' ' + spot.name)}`;
 
     card.innerHTML = `
-      <button class="btn-delete" onclick="deleteSpot(${spot.id})">✕</button>
-      <h3>${escapeHtml(locationText)} ${escapeHtml(spot.name)} ${categoryTagsHtml} ${distanceBadge}</h3>
+      <button class="btn-delete" onclick="deleteSpot('${spot.id}')">✕</button>
+      <h3>${spot.isMust ? '★ ' : ''}${escapeHtml(locationText)} ${escapeHtml(spot.name)} ${categoryTagsHtml} ${distanceBadge}</h3>
       <div class="spot-meta">
         <span>${formattedDate}</span>
         <span class="spot-rating">${stars}</span>
@@ -343,7 +355,7 @@ function escapeHtml(str) {
   });
 }
 
-// データ管理処理（省略なし保持）
+// データ管理処理
 const exportBtn = document.getElementById('export-btn');
 const importTriggerBtn = document.getElementById('import-trigger-btn');
 const importModal = document.getElementById('import-modal');
@@ -410,19 +422,18 @@ if (importExecuteBtn) {
 }
 
 
-
 // ===============================================
 // 1. 移動手段ごとの速度（km/h）と準備・待ち時間（分）定義
 // ===============================================
 const TRANSPORT_SPEEDS = {
-  walk: { speed: 4, margin: 5 },       // 徒歩: 4km/h, 準備5分
-  bike: { speed: 12, margin: 5 },      // 自転車: 12km/h, 準備5分
-  car: { speed: 30, margin: 10 },      // 車: 一般道平均30km/h, 駐車等10分
-  taxi: { speed: 30, margin: 5 },      // タクシー: 30km/h, 迎車等5分
-  bus: { speed: 20, margin: 15 },      // バス: 20km/h, バス停・待ち15分
-  train: { speed: 35, margin: 15 },    // 電車: 35km/h, 乗換・待ち15分
-  shinkansen: { speed: 120, margin: 20 }, // 新幹線: 120km/h, 改札等20分
-  airplane: { speed: 300, margin: 60 }    // 飛行機: 300km/h, 保安検査等60分
+  walk: { speed: 4, margin: 5 },
+  bike: { speed: 12, margin: 5 },
+  car: { speed: 30, margin: 10 },
+  taxi: { speed: 30, margin: 5 },
+  bus: { speed: 20, margin: 15 },
+  train: { speed: 35, margin: 15 },
+  shinkansen: { speed: 120, margin: 20 },
+  airplane: { speed: 300, margin: 60 }
 };
 
 // 2地点間（緯度経度）の直線距離から移動時間を概算（分単位）
@@ -431,7 +442,6 @@ function calculateTravelTime(spotA, spotB, transportType) {
     return 20; // 座標がない場合のデフォルト（20分）
   }
 
-  // 2地点の距離（km）をハバーサイン公式で計算
   const R = 6371;
   const dLat = (spotB.lat - spotA.lat) * Math.PI / 180;
   const dLng = (spotB.lng - spotA.lng) * Math.PI / 180;
@@ -443,17 +453,12 @@ function calculateTravelTime(spotA, spotB, transportType) {
   const distanceKm = R * c;
 
   const transport = TRANSPORT_SPEEDS[transportType] || TRANSPORT_SPEEDS.car;
-  // 道路・ルート補正係数（直線距離の約1.4倍と仮定）
   const actualDistance = distanceKm * 1.4;
   
-  // 移動時間（分）= (距離 / 速度) * 60 + 準備時間
   let minutes = Math.round((actualDistance / transport.speed) * 60) + transport.margin;
-  
-  // 最低移動時間は10分に設定
   return Math.max(10, minutes);
 }
 
-// 時刻の加算ヘルパー (例: "09:00" + 90分 -> "10:30")
 function addMinutesToTime(timeStr, minsToAdd) {
   const [h, m] = timeStr.split(':').map(Number);
   const date = new Date();
@@ -463,7 +468,6 @@ function addMinutesToTime(timeStr, minsToAdd) {
   return `${resH}:${resM}`;
 }
 
-// 2つの時刻の差分（分）を計算 (例: "09:00", "11:30" -> 150分)
 function getTimeDifferenceMinutes(startStr, endStr) {
   const [sh, sm] = startStr.split(':').map(Number);
   const [eh, em] = endStr.split(':').map(Number);
@@ -476,22 +480,22 @@ function getTimeDifferenceMinutes(startStr, endStr) {
 function openItineraryModal() {
   const modal = document.getElementById('itineraryModal');
   const listContainer = document.getElementById('mustSpotStaySettings');
+  if (!modal || !listContainer) return;
+
   listContainer.innerHTML = '';
 
-  // 現在登録されているスポットからマストスポット（★マスト）を抽出
-  const spots = getSavedSpots(); // 既存のスポット取得関数
   const mustSpots = spots.filter(s => s.isMust);
 
   if (mustSpots.length === 0) {
-    alert('マストスポット（★）が登録されていません。スポット登録画面で★マストをセットしてください。');
+    alert('マストスポット（★）が登録されていません。スポット登録画面で「★マスト」にチェックを入れて保存してください。');
     return;
   }
 
-  mustSpots.forEach((spot, idx) => {
+  mustSpots.forEach((spot) => {
     const row = document.createElement('div');
     row.className = 'must-spot-row';
     row.innerHTML = `
-      <span class="spot-title">📍 ${spot.name}</span>
+      <span class="spot-title">📍 ${escapeHtml(spot.name)}</span>
       <select class="form-control spot-stay-time" data-spot-id="${spot.id}">
         <option value="30">30分</option>
         <option value="60" selected>1時間</option>
@@ -508,19 +512,23 @@ function openItineraryModal() {
 }
 
 function closeItineraryModal() {
-  document.getElementById('itineraryModal').classList.add('hidden');
+  const modal = document.getElementById('itineraryModal');
+  if (modal) modal.classList.add('hidden');
 }
 
 function toggleItineraryDays() {
-  const days = document.getElementById('itineraryDays').value;
+  const daysEl = document.getElementById('itineraryDays');
+  if (!daysEl) return;
+  
+  const days = daysEl.value;
   const day2Section = document.getElementById('day2TimeSection');
   const hotelGroup = document.querySelector('.day1-hotel-group');
 
   if (days === "1") {
-    day2Section.style.display = 'none';
+    if (day2Section) day2Section.style.display = 'none';
     if (hotelGroup) hotelGroup.style.display = 'none';
   } else {
-    day2Section.style.display = 'block';
+    if (day2Section) day2Section.style.display = 'block';
     if (hotelGroup) hotelGroup.style.display = 'block';
   }
 }
@@ -535,14 +543,12 @@ function generateItinerary(event) {
   const transport = document.getElementById('itineraryTransport').value;
   const day1Start = document.getElementById('day1StartTime').value;
   const day1Checkin = document.getElementById('day1CheckinTime').value;
-  const day2Start = document.getElementById('day2StartTime').value;
-  const finalEnd = document.getElementById('finalEndTime').value;
+  const day2Start = document.getElementById('day2StartTime') ? document.getElementById('day2StartTime').value : "09:00";
+  const finalEnd = document.getElementById('finalEndTime') ? document.getElementById('finalEndTime').value : "18:00";
 
-  const spots = getSavedSpots();
   const mustSpots = spots.filter(s => s.isMust);
   const subSpots = spots.filter(s => !s.isMust);
 
-  // マストスポットの滞在時間設定を取得
   const stayTimeInputs = document.querySelectorAll('.spot-stay-time');
   const stayTimeMap = {};
   stayTimeInputs.forEach(input => {
@@ -572,47 +578,40 @@ function generateItinerary(event) {
       let stayMins = 60;
       let isMust = false;
 
-      // マストスポットが残っていれば優先割り当て
       if (mustIndex < mustSpots.length) {
         currentSpot = mustSpots[mustIndex];
         stayMins = stayTimeMap[currentSpot.id] || 60;
         mustIndex++;
         isMust = true;
       } else if (subIndex < subSpots.length) {
-        // 隙間埋めスポット割り当て
         currentSpot = subSpots[subIndex];
         stayMins = 45;
         subIndex++;
       } else {
-        break; // 配置可能なスポットが終了
+        break;
       }
 
-      // 前のスポットからの移動時間を自動計算
       let travelMins = prevSpot ? calculateTravelTime(prevSpot, currentSpot, transport) : 15;
       
       let arrivalTime = addMinutesToTime(currentTime, travelMins);
       let departureTime = addMinutesToTime(arrivalTime, stayMins);
 
-      // 制限時間を超えてしまう場合は終了
       if (getTimeDifferenceMinutes(departureTime, endTimeLimit) < 0) {
         break;
       }
 
-      // ルートナビURLの生成 (Google Maps)
-      let mapUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(currentSpot.name)}`;
+      let mapUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent((currentSpot.pref || '') + ' ' + currentSpot.name)}`;
 
       outputText += `   ↓ 🚗 移動（約${travelMins}分）\n`;
-      outputText += `【 ${arrivalTime} - ${departureTime} 】 ${currentSpot.name} [★${currentSpot.rating || '3.5'}] ${isMust ? '★マスト' : '(立ち寄り)'}\n`;
+      outputText += `【 ${arrivalTime} - ${departureTime} 】 ${currentSpot.name} [★${currentSpot.rating || '4'}] ${isMust ? '★マスト' : '(立ち寄り)'}\n`;
       outputText += `   📍マップ: ${mapUrl}\n`;
 
       currentTime = departureTime;
       prevSpot = currentSpot;
     }
 
-    if (d < days || days === 1) {
-      outputText += `   ↓ 🚗 移動\n`;
-      outputText += `【 ${endTimeLimit} 】 ${days > 1 && d === 1 ? '🏨 宿チェックイン' : '🎉 到着・解散'}\n\n`;
-    }
+    outputText += `   ↓ 🚗 移動\n`;
+    outputText += `【 ${endTimeLimit} 】 ${days > 1 && d === 1 ? '🏨 宿チェックイン' : '🎉 到着・解散'}\n\n`;
   }
 
   document.getElementById('itineraryTextOutput').textContent = outputText;
@@ -620,7 +619,6 @@ function generateItinerary(event) {
   document.getElementById('itineraryResultModal').classList.remove('hidden');
 }
 
-// テキストコピー処理
 function copyItineraryToClipboard() {
   const text = document.getElementById('itineraryTextOutput').textContent;
   navigator.clipboard.writeText(text).then(() => {
@@ -631,7 +629,8 @@ function copyItineraryToClipboard() {
 }
 
 function closeItineraryResultModal() {
-  document.getElementById('itineraryResultModal').classList.add('hidden');
+  const modal = document.getElementById('itineraryResultModal');
+  if (modal) modal.classList.add('hidden');
 }
 
 function getTransportLabel(type) {
