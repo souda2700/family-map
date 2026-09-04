@@ -266,3 +266,43 @@ button#save-btn:hover {
 .btn-map:hover {
   background-color: #2f855a;
 }
+
+
+
+/* 現在地関連のスタイル */
+.btn-geo {
+  background-color: #d69e2e;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+  margin-right: 6px;
+  margin-bottom: 8px;
+  font-size: 0.85rem;
+}
+
+.btn-geo:hover {
+  background-color: #b7791f;
+}
+
+.spot-distance {
+  display: inline-block;
+  background-color: #feebc8;
+  color: #744210;
+  font-weight: bold;
+  font-size: 0.8rem;
+  padding: 2px 8px;
+  border-radius: 12px;
+  margin-left: 8px;
+}
+
+.btn-route {
+  background-color: #dd6b20;
+  color: white;
+}
+
+.btn-route:hover {
+  background-color: #c05621;
+}
