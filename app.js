@@ -354,7 +354,9 @@ function escapeHtml(str) {
   });
 }
 
-// データ管理処理
+// ===============================================
+// データ管理処理（※修正箇所）
+// ===============================================
 const exportBtn = document.getElementById('export-btn');
 const importTriggerBtn = document.getElementById('import-trigger-btn');
 const importModal = document.getElementById('import-modal');
@@ -381,19 +383,22 @@ if (exportBtn) {
   });
 }
 
+// 復元画面（モーダル）を開く
 if (importTriggerBtn && importModal) {
   importTriggerBtn.addEventListener('click', () => {
     if (importTextInput) importTextInput.value = '';
-    importModal.classList.remove('hidden');
+    importModal.style.display = 'flex'; // ✅ 修正：直接styleを表示に切り替え
   });
 }
 
+// 復元画面（モーダル）を閉じる
 if (importCancelBtn && importModal) {
   importCancelBtn.addEventListener('click', () => {
-    importModal.classList.add('hidden');
+    importModal.style.display = 'none'; // ✅ 修正：直接styleを非表示に切り替え
   });
 }
 
+// 復元処理の実行
 if (importExecuteBtn) {
   importExecuteBtn.addEventListener('click', () => {
     const jsonText = importTextInput ? importTextInput.value.trim() : '';
@@ -408,7 +413,7 @@ if (importExecuteBtn) {
         if (confirm('現在のデータを上書きして復元しますか？')) {
           spots = importedSpots;
           saveAndRender();
-          if (importModal) importModal.classList.add('hidden');
+          if (importModal) importModal.style.display = 'none'; // ✅ 修正：直接非表示へ
           alert('データを正常に復元しました！');
         }
       } else {
