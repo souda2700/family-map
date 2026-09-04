@@ -1,4 +1,6 @@
+// ===============================================
 // Service Workerの登録 (PWA用)
+// ===============================================
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js')
     .then(() => console.log('Service Worker Registered'))
@@ -78,7 +80,6 @@ const visitDateInput = document.getElementById('visit-date');
 const ratingInput = document.getElementById('rating');
 const mapLinkInput = document.getElementById('map-link');
 const spotMemoInput = document.getElementById('spot-memo');
-const isMustInput = document.getElementById('is-must'); // ★追加: マストスポット用チェックボックス
 
 const searchRegionInput = document.getElementById('search-region');
 const searchPrefInput = document.getElementById('search-pref');
@@ -92,46 +93,49 @@ const spotListContainer = document.getElementById('spot-list');
 let spots = JSON.parse(localStorage.getItem('familyMapSpots')) || [];
 let currentPosition = null; // 現在地保持用
 
-// 【追加】既存コードとの互換用ヘルパー関数
 function getSavedSpots() {
   return spots;
 }
 
 // 地域選択イベント
-regionInput.addEventListener('change', () => {
-  const selectedRegion = regionInput.value;
-  prefInput.innerHTML = '';
+if (regionInput) {
+  regionInput.addEventListener('change', () => {
+    const selectedRegion = regionInput.value;
+    prefInput.innerHTML = '';
 
-  if (!selectedRegion) {
-    prefInput.innerHTML = '<option value="">先に地域を選択してください</option>';
-    return;
-  }
+    if (!selectedRegion) {
+      prefInput.innerHTML = '<option value="">先に地域を選択してください</option>';
+      return;
+    }
 
-  const prefs = prefecturesByRegion[selectedRegion] || [];
-  prefInput.innerHTML = '<option value="">都道府県を選択してください</option>';
-  
-  prefs.forEach(pref => {
-    const opt = document.createElement('option');
-    opt.value = pref;
-    opt.textContent = pref;
-    prefInput.appendChild(opt);
-  });
-});
-
-searchRegionInput.addEventListener('change', () => {
-  const selectedRegion = searchRegionInput.value;
-  searchPrefInput.innerHTML = '<option value="">すべての都道府県</option>';
-
-  if (selectedRegion && prefecturesByRegion[selectedRegion]) {
-    prefecturesByRegion[selectedRegion].forEach(pref => {
+    const prefs = prefecturesByRegion[selectedRegion] || [];
+    prefInput.innerHTML = '<option value="">都道府県を選択してください</option>';
+    
+    prefs.forEach(pref => {
       const opt = document.createElement('option');
       opt.value = pref;
       opt.textContent = pref;
-      searchPrefInput.appendChild(opt);
+      prefInput.appendChild(opt);
     });
-  }
-  renderSpots();
-});
+  });
+}
+
+if (searchRegionInput) {
+  searchRegionInput.addEventListener('change', () => {
+    const selectedRegion = searchRegionInput.value;
+    searchPrefInput.innerHTML = '<option value="">すべての都道府県</option>';
+
+    if (selectedRegion && prefecturesByRegion[selectedRegion]) {
+      prefecturesByRegion[selectedRegion].forEach(pref => {
+        const opt = document.createElement('option');
+        opt.value = pref;
+        opt.textContent = pref;
+        searchPrefInput.appendChild(opt);
+      });
+    }
+    renderSpots();
+  });
+}
 
 if (searchPrefInput) searchPrefInput.addEventListener('change', renderSpots);
 if (searchCategoryInput) searchCategoryInput.addEventListener('change', renderSpots);
@@ -140,11 +144,12 @@ if (searchInput) searchInput.addEventListener('input', renderSpots);
 // 絞り込みクリア
 if (clearFilterBtn) {
   clearFilterBtn.addEventListener('click', () => {
-    searchRegionInput.value = '';
-    searchPrefInput.innerHTML = '<option value="">すべての都道府県</option>';
-    searchCategoryInput.value = '';
-    searchInput.value = '';
-    currentPosition = null; // 現在地ソートリセット
+    if (searchRegionInput) searchRegionInput.value = '';
+    if (searchPrefInput) searchPrefInput.innerHTML = '<option value="">すべての都道府県</option>';
+    if (searchCategoryInput) searchCategoryInput.value = '';
+    if (searchInput) searchInput.value = '';
+    currentPosition = null;
+    if (geoSortBtn) geoSortBtn.textContent = '📍 現在地から近い順に並び替え';
     renderSpots();
   });
 }
@@ -189,39 +194,38 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
   return Math.round(R * c);
 }
 
-renderSpots();
+// フォーム送信処理
+if (spotForm) {
+  spotForm.addEventListener('submit', (e) => {
+    e.preventDefault();
 
-// フォーム送信（★修正: isMust と 座標情報 lat, lng を追加）
-spotForm.addEventListener('submit', (e) => {
-  e.preventDefault();
+    const checkedCategories = Array.from(document.querySelectorAll('input[name="category"]:checked'))
+      .map(cb => cb.value);
 
-  const checkedCategories = Array.from(document.querySelectorAll('input[name="category"]:checked'))
-    .map(cb => cb.value);
+    const selectedPref = prefInput ? prefInput.value : '';
+    const coords = prefCoordinates[selectedPref] || { lat: 35.6895, lng: 139.6917 };
 
-  const selectedPref = prefInput.value;
-  const coords = prefCoordinates[selectedPref] || { lat: 35.6895, lng: 139.6917 };
+    const newSpot = {
+      id: Date.now().toString(),
+      region: regionInput ? regionInput.value : '',
+      pref: selectedPref,
+      lat: coords.lat,
+      lng: coords.lng,
+      name: spotNameInput ? spotNameInput.value.trim() : '',
+      categories: checkedCategories,
+      visitDate: visitDateInput ? visitDateInput.value : '',
+      rating: ratingInput ? parseInt(ratingInput.value, 10) : 3,
+      mapLink: mapLinkInput ? mapLinkInput.value.trim() : '',
+      memo: spotMemoInput ? spotMemoInput.value.trim() : ''
+    };
 
-  const newSpot = {
-    id: Date.now().toString(), // 文字列に変換してIDの不一致を防止
-    region: regionInput.value,
-    pref: selectedPref,
-    lat: coords.lat, // ★移動時間計算用に座標を追加
-    lng: coords.lng, // ★移動時間計算用に座標を追加
-    name: spotNameInput.value.trim(),
-    categories: checkedCategories,
-    visitDate: visitDateInput.value,
-    rating: parseInt(ratingInput.value, 10),
-    isMust: isMustInput ? isMustInput.checked : false, // ★マスト判定の保持
-    mapLink: mapLinkInput.value.trim(),
-    memo: spotMemoInput.value.trim()
-  };
+    spots.unshift(newSpot);
+    saveAndRender();
 
-  spots.unshift(newSpot);
-  saveAndRender();
-
-  spotForm.reset();
-  prefInput.innerHTML = '<option value="">先に地域を選択してください</option>';
-});
+    spotForm.reset();
+    if (prefInput) prefInput.innerHTML = '<option value="">先に地域を選択してください</option>';
+  });
+}
 
 function saveAndRender() {
   localStorage.setItem('familyMapSpots', JSON.stringify(spots));
@@ -236,6 +240,7 @@ function deleteSpot(id) {
 }
 
 function renderSpots() {
+  if (!spotListContainer) return;
   spotListContainer.innerHTML = '';
 
   const selectedRegion = searchRegionInput ? searchRegionInput.value : '';
@@ -265,7 +270,6 @@ function renderSpots() {
     return true;
   });
 
-  // 各スポットと現在地の距離を算出
   filteredSpots.forEach(spot => {
     if (currentPosition && spot.pref && prefCoordinates[spot.pref]) {
       const targetCoords = prefCoordinates[spot.pref];
@@ -280,7 +284,6 @@ function renderSpots() {
     }
   });
 
-  // 現在地ソートが有効な場合、距離が近い順に並び替え
   if (currentPosition) {
     filteredSpots.sort((a, b) => {
       if (a.distance === null) return 1;
@@ -296,9 +299,9 @@ function renderSpots() {
 
   filteredSpots.forEach(spot => {
     const card = document.createElement('div');
-    card.className = `spot-card ${spot.isMust ? 'must-card' : ''}`;
+    card.className = 'spot-card';
 
-    const stars = '★'.repeat(spot.rating) + '☆'.repeat(5 - spot.rating);
+    const stars = '★'.repeat(spot.rating || 0) + '☆'.repeat(5 - (spot.rating || 0));
     const formattedDate = spot.visitDate ? `📅 ${spot.visitDate}` : '📅 日未設定';
     const locationText = spot.pref ? `📍 [${spot.pref}]` : (spot.region ? `📍 [${spot.region}]` : '');
     
@@ -309,22 +312,18 @@ function renderSpots() {
       categoryTagsHtml = `<span class="spot-tag">${escapeHtml(spot.category)}</span>`;
     }
 
-    // 距離バッジ表示
     const distanceBadge = spot.distance !== null ? `<span class="spot-distance">現在地から約 ${spot.distance} km</span>` : '';
 
-    // URL関係
     const mapUrl = spot.mapLink 
       ? spot.mapLink 
       : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((spot.pref || '') + ' ' + spot.name)}`;
 
     const hpSearchUrl = `https://www.google.com/search?q=${encodeURIComponent((spot.pref || '') + ' ' + spot.name + ' 公式')}`;
-
-    // 🚗 現在地からのルート案内URL
     const routeUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent((spot.pref || '') + ' ' + spot.name)}`;
 
     card.innerHTML = `
       <button class="btn-delete" onclick="deleteSpot('${spot.id}')">✕</button>
-      <h3>${spot.isMust ? '★ ' : ''}${escapeHtml(locationText)} ${escapeHtml(spot.name)} ${categoryTagsHtml} ${distanceBadge}</h3>
+      <h3>${escapeHtml(locationText)} ${escapeHtml(spot.name)} ${categoryTagsHtml} ${distanceBadge}</h3>
       <div class="spot-meta">
         <span>${formattedDate}</span>
         <span class="spot-rating">${stars}</span>
@@ -384,20 +383,20 @@ if (exportBtn) {
 
 if (importTriggerBtn && importModal) {
   importTriggerBtn.addEventListener('click', () => {
-    importTextInput.value = '';
-    importModal.style.display = 'flex';
+    if (importTextInput) importTextInput.value = '';
+    importModal.classList.remove('hidden');
   });
 }
 
 if (importCancelBtn && importModal) {
   importCancelBtn.addEventListener('click', () => {
-    importModal.style.display = 'none';
+    importModal.classList.add('hidden');
   });
 }
 
 if (importExecuteBtn) {
   importExecuteBtn.addEventListener('click', () => {
-    const jsonText = importTextInput.value.trim();
+    const jsonText = importTextInput ? importTextInput.value.trim() : '';
     if (!jsonText) {
       alert('テキストが入力されていません。コピーしたバックアップデータを貼り付けてください。');
       return;
@@ -409,7 +408,7 @@ if (importExecuteBtn) {
         if (confirm('現在のデータを上書きして復元しますか？')) {
           spots = importedSpots;
           saveAndRender();
-          importModal.style.display = 'none';
+          if (importModal) importModal.classList.add('hidden');
           alert('データを正常に復元しました！');
         }
       } else {
@@ -421,223 +420,5 @@ if (importExecuteBtn) {
   });
 }
 
-
-// ===============================================
-// 1. 移動手段ごとの速度（km/h）と準備・待ち時間（分）定義
-// ===============================================
-const TRANSPORT_SPEEDS = {
-  walk: { speed: 4, margin: 5 },
-  bike: { speed: 12, margin: 5 },
-  car: { speed: 30, margin: 10 },
-  taxi: { speed: 30, margin: 5 },
-  bus: { speed: 20, margin: 15 },
-  train: { speed: 35, margin: 15 },
-  shinkansen: { speed: 120, margin: 20 },
-  airplane: { speed: 300, margin: 60 }
-};
-
-// 2地点間（緯度経度）の直線距離から移動時間を概算（分単位）
-function calculateTravelTime(spotA, spotB, transportType) {
-  if (!spotA || !spotB || !spotA.lat || !spotA.lng || !spotB.lat || !spotB.lng) {
-    return 20; // 座標がない場合のデフォルト（20分）
-  }
-
-  const R = 6371;
-  const dLat = (spotB.lat - spotA.lat) * Math.PI / 180;
-  const dLng = (spotB.lng - spotA.lng) * Math.PI / 180;
-  const a = 
-    Math.sin(dLat/2) * Math.sin(dLat/2) +
-    Math.cos(spotA.lat * Math.PI / 180) * Math.cos(spotB.lat * Math.PI / 180) * 
-    Math.sin(dLng/2) * Math.sin(dLng/2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-  const distanceKm = R * c;
-
-  const transport = TRANSPORT_SPEEDS[transportType] || TRANSPORT_SPEEDS.car;
-  const actualDistance = distanceKm * 1.4;
-  
-  let minutes = Math.round((actualDistance / transport.speed) * 60) + transport.margin;
-  return Math.max(10, minutes);
-}
-
-function addMinutesToTime(timeStr, minsToAdd) {
-  const [h, m] = timeStr.split(':').map(Number);
-  const date = new Date();
-  date.setHours(h, m + minsToAdd, 0, 0);
-  const resH = String(date.getHours()).padStart(2, '0');
-  const resM = String(date.getMinutes()).padStart(2, '0');
-  return `${resH}:${resM}`;
-}
-
-function getTimeDifferenceMinutes(startStr, endStr) {
-  const [sh, sm] = startStr.split(':').map(Number);
-  const [eh, em] = endStr.split(':').map(Number);
-  return (eh * 60 + em) - (sh * 60 + sm);
-}
-
-// ===============================================
-// 2. しおり作成モーダルの表示・制御
-// ===============================================
-function openItineraryModal() {
-  const modal = document.getElementById('itineraryModal');
-  const listContainer = document.getElementById('mustSpotStaySettings');
-  if (!modal || !listContainer) return;
-
-  listContainer.innerHTML = '';
-
-  const mustSpots = spots.filter(s => s.isMust);
-
-  if (mustSpots.length === 0) {
-    alert('マストスポット（★）が登録されていません。スポット登録画面で「★マスト」にチェックを入れて保存してください。');
-    return;
-  }
-
-  mustSpots.forEach((spot) => {
-    const row = document.createElement('div');
-    row.className = 'must-spot-row';
-    row.innerHTML = `
-      <span class="spot-title">📍 ${escapeHtml(spot.name)}</span>
-      <select class="form-control spot-stay-time" data-spot-id="${spot.id}">
-        <option value="30">30分</option>
-        <option value="60" selected>1時間</option>
-        <option value="90">1時間30分</option>
-        <option value="120">2時間</option>
-        <option value="180">3時間</option>
-      </select>
-    `;
-    listContainer.appendChild(row);
-  });
-
-  toggleItineraryDays();
-  modal.classList.remove('hidden');
-}
-
-function closeItineraryModal() {
-  const modal = document.getElementById('itineraryModal');
-  if (modal) modal.classList.add('hidden');
-}
-
-function toggleItineraryDays() {
-  const daysEl = document.getElementById('itineraryDays');
-  if (!daysEl) return;
-  
-  const days = daysEl.value;
-  const day2Section = document.getElementById('day2TimeSection');
-  const hotelGroup = document.querySelector('.day1-hotel-group');
-
-  if (days === "1") {
-    if (day2Section) day2Section.style.display = 'none';
-    if (hotelGroup) hotelGroup.style.display = 'none';
-  } else {
-    if (day2Section) day2Section.style.display = 'block';
-    if (hotelGroup) hotelGroup.style.display = 'block';
-  }
-}
-
-// ===============================================
-// 3. しおり自動作成ロジックの実行
-// ===============================================
-function generateItinerary(event) {
-  event.preventDefault();
-
-  const days = parseInt(document.getElementById('itineraryDays').value);
-  const transport = document.getElementById('itineraryTransport').value;
-  const day1Start = document.getElementById('day1StartTime').value;
-  const day1Checkin = document.getElementById('day1CheckinTime').value;
-  const day2Start = document.getElementById('day2StartTime') ? document.getElementById('day2StartTime').value : "09:00";
-  const finalEnd = document.getElementById('finalEndTime') ? document.getElementById('finalEndTime').value : "18:00";
-
-  const mustSpots = spots.filter(s => s.isMust);
-  const subSpots = spots.filter(s => !s.isMust);
-
-  const stayTimeInputs = document.querySelectorAll('.spot-stay-time');
-  const stayTimeMap = {};
-  stayTimeInputs.forEach(input => {
-    stayTimeMap[input.dataset.spotId] = parseInt(input.value);
-  });
-
-  let outputText = `========================================\n`;
-  outputText += ` 📖 旅のしおり（${days === 1 ? '日帰り' : days + '泊' + (days+1) + '日'}）\n`;
-  outputText += ` 移動手段: ${getTransportLabel(transport)}\n`;
-  outputText += `========================================\n\n`;
-
-  let mustIndex = 0;
-  let subIndex = 0;
-
-  for (let d = 1; d <= days; d++) {
-    outputText += `--- 【 ${d}日目 】 ------------------------\n\n`;
-    
-    let currentTime = (d === 1) ? day1Start : day2Start;
-    let endTimeLimit = (d === days) ? finalEnd : day1Checkin;
-
-    outputText += `【 ${currentTime} 】 出発\n`;
-
-    let prevSpot = null;
-
-    while (getTimeDifferenceMinutes(currentTime, endTimeLimit) > 40) {
-      let currentSpot = null;
-      let stayMins = 60;
-      let isMust = false;
-
-      if (mustIndex < mustSpots.length) {
-        currentSpot = mustSpots[mustIndex];
-        stayMins = stayTimeMap[currentSpot.id] || 60;
-        mustIndex++;
-        isMust = true;
-      } else if (subIndex < subSpots.length) {
-        currentSpot = subSpots[subIndex];
-        stayMins = 45;
-        subIndex++;
-      } else {
-        break;
-      }
-
-      let travelMins = prevSpot ? calculateTravelTime(prevSpot, currentSpot, transport) : 15;
-      
-      let arrivalTime = addMinutesToTime(currentTime, travelMins);
-      let departureTime = addMinutesToTime(arrivalTime, stayMins);
-
-      if (getTimeDifferenceMinutes(departureTime, endTimeLimit) < 0) {
-        break;
-      }
-
-      let mapUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent((currentSpot.pref || '') + ' ' + currentSpot.name)}`;
-
-      outputText += `   ↓ 🚗 移動（約${travelMins}分）\n`;
-      outputText += `【 ${arrivalTime} - ${departureTime} 】 ${currentSpot.name} [★${currentSpot.rating || '4'}] ${isMust ? '★マスト' : '(立ち寄り)'}\n`;
-      outputText += `   📍マップ: ${mapUrl}\n`;
-
-      currentTime = departureTime;
-      prevSpot = currentSpot;
-    }
-
-    outputText += `   ↓ 🚗 移動\n`;
-    outputText += `【 ${endTimeLimit} 】 ${days > 1 && d === 1 ? '🏨 宿チェックイン' : '🎉 到着・解散'}\n\n`;
-  }
-
-  document.getElementById('itineraryTextOutput').textContent = outputText;
-  closeItineraryModal();
-  document.getElementById('itineraryResultModal').classList.remove('hidden');
-}
-
-function copyItineraryToClipboard() {
-  const text = document.getElementById('itineraryTextOutput').textContent;
-  navigator.clipboard.writeText(text).then(() => {
-    alert('📋 LINE用にしおりのテキストをコピーしました！');
-  }).catch(err => {
-    alert('コピーに失敗しました。直接テキストを選択してコピーしてください。');
-  });
-}
-
-function closeItineraryResultModal() {
-  const modal = document.getElementById('itineraryResultModal');
-  if (modal) modal.classList.add('hidden');
-}
-
-function getTransportLabel(type) {
-  const labels = {
-    walk: '🚶 徒歩', bike: '🚲 自転車', car: '🚗 自家用車/レンタカー',
-    taxi: '🚕 タクシー', bus: '🚌 公共バス', train: '🚃 電車',
-    shinkansen: '🚄 新幹線/特急', airplane: '✈️ 飛行機'
-  };
-  return labels[type] || '🚗 車';
-}
+// 初期表示実行
+renderSpots();

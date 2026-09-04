@@ -216,7 +216,7 @@ button#save-btn:hover {
   cursor: pointer;
 }
 
-/* アクションボタン（HP検索・マップ）の整列 */
+/* アクションボタン（HP検索・マップ・ルート）の整列 */
 .spot-action-btns {
   display: flex;
   gap: 8px;
@@ -293,7 +293,7 @@ button#save-btn:hover {
 }
 
 /* ===============================================
-   モーダル基本構造 & 非表示制御（追加）
+   モーダル基本構造 & 非表示制御（インポート用等）
    =============================================== */
 .hidden {
   display: none !important;
@@ -321,6 +321,8 @@ button#save-btn:hover {
   flex-direction: column;
   max-height: 90vh;
   overflow: hidden;
+  max-width: 500px;
+  width: 100%;
 }
 
 .modal-header {
@@ -392,103 +394,4 @@ button#save-btn:hover {
 
 .btn-secondary:hover {
   background-color: #a0aec0;
-}
-
-/* ===============================================
-   旅のしおりモーダル・タイムライン表示のスタイル
-   =============================================== */
-.itinerary-modal-content {
-  max-width: 600px;
-  width: 100%;
-}
-
-.time-section-box {
-  background-color: #f8f9fa;
-  border-radius: 8px;
-  padding: 12px 16px;
-  margin-bottom: 15px;
-  border-left: 4px solid #4a90e2;
-}
-
-.time-section-box h4 {
-  margin-top: 0;
-  margin-bottom: 10px;
-  font-size: 0.95rem;
-  color: #333;
-}
-
-.form-row {
-  display: flex;
-  gap: 12px;
-}
-
-.form-row .col {
-  flex: 1;
-}
-
-.must-spot-settings-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  max-height: 180px;
-  overflow-y: auto;
-  padding-right: 4px;
-}
-
-.must-spot-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: #fff;
-  border: 1px solid #e0e0e0;
-  border-radius: 6px;
-  padding: 6px 10px;
-}
-
-.must-spot-row .spot-title {
-  font-size: 0.88rem;
-  font-weight: bold;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 60%;
-}
-
-.must-spot-row select {
-  width: auto;
-  padding: 4px 8px;
-  font-size: 0.85rem;
-}
-
-/* しおり結果出力領域 */
-.itinerary-result-content {
-  max-width: 650px;
-  width: 100%;
-}
-
-.itinerary-text-preview {
-  background-color: #f4f6f8;
-  border: 1px solid #dcdfe6;
-  border-radius: 8px;
-  padding: 15px;
-  font-family: 'Courier New', Courier, monospace, sans-serif;
-  font-size: 0.88rem;
-  line-height: 1.5;
-  white-space: pre-wrap;
-  word-break: break-all;
-  max-height: 60vh;
-  overflow-y: auto;
-  color: #2c3e50;
-}
-
-/* LINEコピーボタン */
-.btn-line {
-  background-color: #06c755;
-  color: #ffffff;
-  border: none;
-  font-weight: bold;
-}
-
-.btn-line:hover {
-  background-color: #05b34c;
 }
