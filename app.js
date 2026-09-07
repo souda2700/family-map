@@ -92,6 +92,7 @@ const spotListContainer = document.getElementById('spot-list');
 
 let spots = JSON.parse(localStorage.getItem('familyMapSpots')) || [];
 let currentPosition = null; // 現在地保持用
+let editingSpotId = null;   // 編集中のスポットID（nullの場合は新規作成）
 
 function getSavedSpots() {
   return spots;
@@ -100,23 +101,30 @@ function getSavedSpots() {
 // 地域選択イベント
 if (regionInput) {
   regionInput.addEventListener('change', () => {
-    const selectedRegion = regionInput.value;
-    prefInput.innerHTML = '';
+    updatePrefecturesOptions(regionInput.value);
+  });
+}
 
-    if (!selectedRegion) {
-      prefInput.innerHTML = '<option value="">先に地域を選択してください</option>';
-      return;
+function updatePrefecturesOptions(selectedRegion, selectedPref = '') {
+  if (!prefInput) return;
+  prefInput.innerHTML = '';
+
+  if (!selectedRegion) {
+    prefInput.innerHTML = '<option value="">先に地域を選択してください</option>';
+    return;
+  }
+
+  const prefs = prefecturesByRegion[selectedRegion] || [];
+  prefInput.innerHTML = '<option value="">都道府県を選択してください</option>';
+  
+  prefs.forEach(pref => {
+    const opt = document.createElement('option');
+    opt.value = pref;
+    opt.textContent = pref;
+    if (pref === selectedPref) {
+      opt.selected = true;
     }
-
-    const prefs = prefecturesByRegion[selectedRegion] || [];
-    prefInput.innerHTML = '<option value="">都道府県を選択してください</option>';
-    
-    prefs.forEach(pref => {
-      const opt = document.createElement('option');
-      opt.value = pref;
-      opt.textContent = pref;
-      prefInput.appendChild(opt);
-    });
+    prefInput.appendChild(opt);
   });
 }
 
@@ -194,7 +202,7 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
   return Math.round(R * c);
 }
 
-// フォーム送信処理
+// フォーム送信処理（新規登録・編集更新）
 if (spotForm) {
   spotForm.addEventListener('submit', (e) => {
     e.preventDefault();
@@ -205,26 +213,95 @@ if (spotForm) {
     const selectedPref = prefInput ? prefInput.value : '';
     const coords = prefCoordinates[selectedPref] || { lat: 35.6895, lng: 139.6917 };
 
-    const newSpot = {
-      id: Date.now().toString(),
-      region: regionInput ? regionInput.value : '',
-      pref: selectedPref,
-      lat: coords.lat,
-      lng: coords.lng,
-      name: spotNameInput ? spotNameInput.value.trim() : '',
-      categories: checkedCategories,
-      visitDate: visitDateInput ? visitDateInput.value : '',
-      rating: ratingInput ? parseInt(ratingInput.value, 10) : 3,
-      mapLink: mapLinkInput ? mapLinkInput.value.trim() : '',
-      memo: spotMemoInput ? spotMemoInput.value.trim() : ''
-    };
+    if (editingSpotId) {
+      // --- 編集モード（更新処理）---
+      const targetIndex = spots.findIndex(s => s.id == editingSpotId);
+      if (targetIndex !== -1) {
+        spots[targetIndex] = {
+          ...spots[targetIndex],
+          region: regionInput ? regionInput.value : '',
+          pref: selectedPref,
+          lat: coords.lat,
+          lng: coords.lng,
+          name: spotNameInput ? spotNameInput.value.trim() : '',
+          categories: checkedCategories,
+          visitDate: visitDateInput ? visitDateInput.value : '',
+          rating: ratingInput ? parseInt(ratingInput.value, 10) : 3,
+          mapLink: mapLinkInput ? mapLinkInput.value.trim() : '',
+          memo: spotMemoInput ? spotMemoInput.value.trim() : ''
+        };
+      }
+      editingSpotId = null;
+      resetSubmitButtonLabel('登録する');
+    } else {
+      // --- 新規登録モード ---
+      const newSpot = {
+        id: Date.now().toString(),
+        region: regionInput ? regionInput.value : '',
+        pref: selectedPref,
+        lat: coords.lat,
+        lng: coords.lng,
+        name: spotNameInput ? spotNameInput.value.trim() : '',
+        categories: checkedCategories,
+        visitDate: visitDateInput ? visitDateInput.value : '',
+        rating: ratingInput ? parseInt(ratingInput.value, 10) : 3,
+        mapLink: mapLinkInput ? mapLinkInput.value.trim() : '',
+        memo: spotMemoInput ? spotMemoInput.value.trim() : ''
+      };
+      spots.unshift(newSpot);
+    }
 
-    spots.unshift(newSpot);
     saveAndRender();
 
     spotForm.reset();
     if (prefInput) prefInput.innerHTML = '<option value="">先に地域を選択してください</option>';
   });
+}
+
+// スポットの編集を開始する関数
+function editSpot(id) {
+  const targetSpot = spots.find(s => s.id == id);
+  if (!targetSpot) return;
+
+  editingSpotId = id;
+
+  // フォームに値をセット
+  if (regionInput) regionInput.value = targetSpot.region || '';
+  updatePrefecturesOptions(targetSpot.region || '', targetSpot.pref || '');
+  if (spotNameInput) spotNameInput.value = targetSpot.name || '';
+  if (visitDateInput) visitDateInput.value = targetSpot.visitDate || '';
+  if (ratingInput) ratingInput.value = targetSpot.rating || 3;
+  if (mapLinkInput) mapLinkInput.value = targetSpot.mapLink || '';
+  if (spotMemoInput) spotMemoInput.value = targetSpot.memo || '';
+
+  // カテゴリチェックボックスのセット
+  const checkboxes = document.querySelectorAll('input[name="category"]');
+  checkboxes.forEach(cb => {
+    if (Array.isArray(targetSpot.categories)) {
+      cb.checked = targetSpot.categories.includes(cb.value);
+    } else if (targetSpot.category) {
+      cb.checked = (targetSpot.category === cb.value);
+    } else {
+      cb.checked = false;
+    }
+  });
+
+  // ボタンの文字を「変更を保存する」に変更
+  resetSubmitButtonLabel('変更を保存する');
+
+  // 入力フォームへスムーズスクロール
+  if (spotForm) {
+    spotForm.scrollIntoView({ behavior: 'smooth' });
+  }
+}
+
+// フォーム送信ボタンのテキスト変更ヘルパー
+function resetSubmitButtonLabel(text) {
+  if (!spotForm) return;
+  const submitBtn = spotForm.querySelector('button[type="submit"]');
+  if (submitBtn) {
+    submitBtn.textContent = text;
+  }
 }
 
 function saveAndRender() {
@@ -235,6 +312,11 @@ function saveAndRender() {
 function deleteSpot(id) {
   if (confirm('このスポットを削除してもよろしいですか？')) {
     spots = spots.filter(spot => spot.id != id);
+    if (editingSpotId == id) {
+      editingSpotId = null;
+      if (spotForm) spotForm.reset();
+      resetSubmitButtonLabel('登録する');
+    }
     saveAndRender();
   }
 }
@@ -322,8 +404,11 @@ function renderSpots() {
     const routeUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent((spot.pref || '') + ' ' + spot.name)}`;
 
     card.innerHTML = `
-      <button class="btn-delete" onclick="deleteSpot('${spot.id}')">✕</button>
-      <h3>${escapeHtml(locationText)} ${escapeHtml(spot.name)} ${categoryTagsHtml} ${distanceBadge}</h3>
+      <div class="card-header-actions" style="position: absolute; top: 10px; right: 10px; display: flex; gap: 8px;">
+        <button class="btn-edit" onclick="editSpot('${spot.id}')" style="background: none; border: none; cursor: pointer; font-size: 0.9rem; color: #007bff;">✏️ 編集</button>
+        <button class="btn-delete" onclick="deleteSpot('${spot.id}')" style="background: none; border: none; cursor: pointer; font-size: 0.9rem; color: #dc3545;">✕</button>
+      </div>
+      <h3 style="padding-right: 60px;">${escapeHtml(locationText)} ${escapeHtml(spot.name)} ${categoryTagsHtml} ${distanceBadge}</h3>
       <div class="spot-meta">
         <span>${formattedDate}</span>
         <span class="spot-rating">${stars}</span>
@@ -355,7 +440,7 @@ function escapeHtml(str) {
 }
 
 // ===============================================
-// データ管理処理（※修正箇所）
+// データ管理処理
 // ===============================================
 const exportBtn = document.getElementById('export-btn');
 const importTriggerBtn = document.getElementById('import-trigger-btn');
@@ -387,30 +472,18 @@ if (exportBtn) {
 if (importTriggerBtn && importModal) {
   importTriggerBtn.addEventListener('click', () => {
     if (importTextInput) importTextInput.value = '';
-    importModal.style.display = 'flex'; // ✅ 修正：直接styleを表示に切り替え
+    importModal.style.display = 'flex';
   });
 }
 
 // 復元画面（モーダル）を閉じる
 if (importCancelBtn && importModal) {
   importCancelBtn.addEventListener('click', () => {
-    importModal.style.display = 'none'; // ✅ 修正：直接styleを非表示に切り替え
+    importModal.style.display = 'none';
   });
 }
 
-// 復元処理の実行
-if (importExecuteBtn) {
-  importExecuteBtn.addEventListener('click', () => {
-    const jsonText = importTextInput ? importTextInput.value.trim() : '';
-    if (!jsonText) {
-      alert('テキストが入力されていません。コピーしたバックアップデータを貼り付けてください。');
-      return;
-    }
-
-    try {
-      const importedSpots = JSON.parse(jsonText);
-      if (Array.isArray(importedSpots)) {
-        // 復元処理の実行（既存データを残して追加する仕様）
+// 復元処理の実行（既存データを残して追加する仕様）
 if (importExecuteBtn) {
   importExecuteBtn.addEventListener('click', () => {
     const jsonText = importTextInput ? importTextInput.value.trim() : '';
@@ -441,14 +514,6 @@ if (importExecuteBtn) {
           if (importModal) importModal.style.display = 'none';
           alert(`${newSpots.length} 件のスポットを追加登録しました！`);
         }
-      } else {
-        alert('正しいバックアップデータ形式ではありません。');
-      }
-    } catch (err) {
-      alert('データの読み込みに失敗しました。貼り付けたテキストが正しいかご確認ください。');
-    }
-  });
-}
       } else {
         alert('正しいバックアップデータ形式ではありません。');
       }
