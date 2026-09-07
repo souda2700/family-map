@@ -410,12 +410,45 @@ if (importExecuteBtn) {
     try {
       const importedSpots = JSON.parse(jsonText);
       if (Array.isArray(importedSpots)) {
-        if (confirm('現在のデータを上書きして復元しますか？')) {
-          spots = importedSpots;
-          saveAndRender();
-          if (importModal) importModal.style.display = 'none'; // ✅ 修正：直接非表示へ
-          alert('データを正常に復元しました！');
+        // 復元処理の実行（既存データを残して追加する仕様）
+if (importExecuteBtn) {
+  importExecuteBtn.addEventListener('click', () => {
+    const jsonText = importTextInput ? importTextInput.value.trim() : '';
+    if (!jsonText) {
+      alert('テキストが入力されていません。コピーしたバックアップデータを貼り付けてください。');
+      return;
+    }
+
+    try {
+      const importedSpots = JSON.parse(jsonText);
+      if (Array.isArray(importedSpots)) {
+        // 既存のID一覧を取得
+        const existingIds = new Set(spots.map(spot => spot.id));
+
+        // 既存データに含まれていないスポット（新スポット）だけを抽出
+        const newSpots = importedSpots.filter(spot => !existingIds.has(spot.id));
+
+        if (newSpots.length === 0) {
+          alert('取り込んだデータはすべて登録済みでした。（新しいスポットはありませんでした）');
+          return;
         }
+
+        if (confirm(`既存のデータ ${spots.length} 件を残し、新しいデータ ${newSpots.length} 件を追加しますか？`)) {
+          // 既存データの末尾に新しいデータを結合
+          spots = spots.concat(newSpots);
+          saveAndRender();
+          
+          if (importModal) importModal.style.display = 'none';
+          alert(`${newSpots.length} 件のスポットを追加登録しました！`);
+        }
+      } else {
+        alert('正しいバックアップデータ形式ではありません。');
+      }
+    } catch (err) {
+      alert('データの読み込みに失敗しました。貼り付けたテキストが正しいかご確認ください。');
+    }
+  });
+}
       } else {
         alert('正しいバックアップデータ形式ではありません。');
       }
