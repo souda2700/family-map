@@ -1,4 +1,4 @@
-const CACHE_NAME = 'trail-app-v12';
+const CACHE_NAME = 'trail-app-v14';
 const urlsToCache = [
   './',
   './index.html',

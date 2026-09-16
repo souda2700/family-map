@@ -396,11 +396,15 @@ function renderSpots() {
 
     const distanceBadge = spot.distance !== null ? `<span class="spot-distance">現在地から約 ${spot.distance} km</span>` : '';
 
-    const mapUrl = spot.mapLink 
-      ? spot.mapLink 
-      : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((spot.pref || '') + ' ' + spot.name)}`;
+    // 🌐 HP検索：登録リンク（spot.mapLink）があればそれを開き、なければGoogleで公式検索
+    const hpSearchUrl = spot.mapLink && spot.mapLink.trim() !== ''
+      ? spot.mapLink
+      : `https://www.google.com/search?q=${encodeURIComponent((spot.pref || '') + ' ' + spot.name + ' 公式')}`;
 
-    const hpSearchUrl = `https://www.google.com/search?q=${encodeURIComponent((spot.pref || '') + ' ' + spot.name + ' 公式')}`;
+    // 📍 マップ：常にGoogleマップで該当スポットを開く
+    const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((spot.pref || '') + ' ' + spot.name)}`;
+
+    // 🚗 ルート案内：目的地までのルートを開く
     const routeUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent((spot.pref || '') + ' ' + spot.name)}`;
 
     card.innerHTML = `
