@@ -20,7 +20,7 @@ const prefecturesByRegion = {
   "九州・沖縄": ["福岡県", "佐賀県", "長崎県", "熊本県", "大分県", "宮崎県", "鹿児島県", "沖縄県"]
 };
 
-// 都道府県の中心座標（概算用マスターデータ）
+// 都道府県の中心座標（フォールバック用マスターデータ）
 const prefCoordinates = {
   "北海道": { lat: 43.0642, lng: 141.3469 },
   "青森県": { lat: 40.8244, lng: 140.7400 },
@@ -202,6 +202,25 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
   return Math.round(R * c);
 }
 
+// GoogleマップURLから緯度・経度を解析・抽出する関数
+function extractCoordsFromMapLink(url) {
+  if (!url) return null;
+
+  // パターン1: @35.1234,139.1234
+  const atMatch = url.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+  if (atMatch) {
+    return { lat: parseFloat(atMatch[1]), lng: parseFloat(atMatch[2]) };
+  }
+
+  // パターン2: ?q=35.1234,139.1234 や ll=35.1234,139.1234
+  const queryMatch = url.match(/[?&](?:q|ll)=(-?\d+\.\d+),(-?\d+\.\d+)/);
+  if (queryMatch) {
+    return { lat: parseFloat(queryMatch[1]), lng: parseFloat(queryMatch[2]) };
+  }
+
+  return null;
+}
+
 // フォーム送信処理（新規登録・編集更新）
 if (spotForm) {
   spotForm.addEventListener('submit', (e) => {
@@ -211,7 +230,15 @@ if (spotForm) {
       .map(cb => cb.value);
 
     const selectedPref = prefInput ? prefInput.value : '';
-    const coords = prefCoordinates[selectedPref] || { lat: 35.6895, lng: 139.6917 };
+    const mapUrl = mapLinkInput ? mapLinkInput.value.trim() : '';
+
+    // 1. GoogleマップURLからの座標抽出を試みる
+    let coords = extractCoordsFromMapLink(mapUrl);
+
+    // 2. URLから取得できなかった場合は、都道府県の代表座標にフォールバック
+    if (!coords) {
+      coords = prefCoordinates[selectedPref] || { lat: 35.6895, lng: 139.6917 };
+    }
 
     if (editingSpotId) {
       // --- 編集モード（更新処理）---
@@ -227,7 +254,7 @@ if (spotForm) {
           categories: checkedCategories,
           visitDate: visitDateInput ? visitDateInput.value : '',
           rating: ratingInput ? parseInt(ratingInput.value, 10) : 3,
-          mapLink: mapLinkInput ? mapLinkInput.value.trim() : '',
+          mapLink: mapUrl,
           memo: spotMemoInput ? spotMemoInput.value.trim() : ''
         };
       }
@@ -245,7 +272,7 @@ if (spotForm) {
         categories: checkedCategories,
         visitDate: visitDateInput ? visitDateInput.value : '',
         rating: ratingInput ? parseInt(ratingInput.value, 10) : 3,
-        mapLink: mapLinkInput ? mapLinkInput.value.trim() : '',
+        mapLink: mapUrl,
         memo: spotMemoInput ? spotMemoInput.value.trim() : ''
       };
       spots.unshift(newSpot);
@@ -353,13 +380,17 @@ function renderSpots() {
   });
 
   filteredSpots.forEach(spot => {
-    if (currentPosition && spot.pref && prefCoordinates[spot.pref]) {
-      const targetCoords = prefCoordinates[spot.pref];
+    // 1. スポット個別の緯度経度があれば優先使用
+    // 2. 無い場合は、従来の都道府県代表座標を使用
+    const targetLat = spot.lat || (spot.pref && prefCoordinates[spot.pref] ? prefCoordinates[spot.pref].lat : null);
+    const targetLng = spot.lng || (spot.pref && prefCoordinates[spot.pref] ? prefCoordinates[spot.pref].lng : null);
+
+    if (currentPosition && targetLat !== null && targetLng !== null) {
       spot.distance = calculateDistance(
         currentPosition.lat,
         currentPosition.lng,
-        targetCoords.lat,
-        targetCoords.lng
+        targetLat,
+        targetLng
       );
     } else {
       spot.distance = null;
