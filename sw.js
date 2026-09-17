@@ -1,10 +1,12 @@
-const CACHE_NAME = 'trail-app-v17';
+const CACHE_NAME = 'trail-app-v18'; // キャッシュ名を少し変更（更新を反映させるため）
 const urlsToCache = [
   './',
   './index.html',
   './style.css',
   './app.js',
-  './manifest.json'
+  './manifest.json',
+  './icon-192.png',
+  './icon-512.png'
 ];
 
 // インストール処理
